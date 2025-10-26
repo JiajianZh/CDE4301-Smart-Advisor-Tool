@@ -7,6 +7,12 @@ st.set_page_config(page_title="Identity-Based Major Advisor", page_icon="🎓", 
 st.title("Identity-Based Major Advisor")
 st.write("Answer a few quick questions. We’ll infer your work-mode profile and suggest programs (incl. NUS).")
 
+# -------- Cached data loader (faster reloads) --------
+@st.cache_data(ttl=3600, show_spinner=False)  # cache CSV for 1 hour
+def load_programs():
+    return pd.read_csv("data/programs.csv")
+
+# -------- Config --------
 WORK_MODES = ["builder","analyst","people","creative","researcher","operator","systems"]
 
 QUESTIONS = [
@@ -20,6 +26,7 @@ QUESTIONS = [
     ("Preferred study style", ["lab","studio","theory","project"])
 ]
 
+# Each option adds weights to work modes
 MODE_MAP = {
     "Fix a machine":{"builder":2,"systems":1},
     "Interview users":{"people":2,"creative":1},
@@ -38,12 +45,14 @@ MODE_MAP = {
     "Digital & informational":{"analyst":2,"researcher":1},
 }
 
-def cosine(a, b):
-    dot = sum(a[k]*b[k] for k in WORK_MODES)
-    na = math.sqrt(sum(a[k]*a[k] for a_k in [a] for k in WORK_MODES))
-    nb = math.sqrt(sum(b[k]*b[k] for b_k in [b] for k in WORK_MODES))
-    return 0.0 if na==0 or nb==0 else dot/(na*nb)
+def cosine(a: dict, b: dict) -> float:
+    # a and b are dicts with keys = WORK_MODES and values = floats
+    dot = sum(a.get(k,0)*b.get(k,0) for k in WORK_MODES)
+    na = math.sqrt(sum((a.get(k,0))**2 for k in WORK_MODES))
+    nb = math.sqrt(sum((b.get(k,0))**2 for k in WORK_MODES))
+    return 0.0 if na == 0 or nb == 0 else dot / (na * nb)
 
+# -------- UI --------
 with st.form("quiz"):
     ans = {}
     ans["q1"] = st.radio(*QUESTIONS[0], index=None)
@@ -54,48 +63,52 @@ with st.form("quiz"):
     ans["q6"] = st.radio(*QUESTIONS[5], index=None)
     ans["interests"] = st.multiselect(QUESTIONS[6][0], QUESTIONS[6][1], max_selections=2)
     ans["style"] = st.radio(*QUESTIONS[7], index=None)
-    go = st.form_submit_button("See my results")
+    go = st.form_submit_button("See my matches")
 
 if go and None not in [ans["q1"],ans["q2"],ans["q3"],ans["q4"],ans["q5"],ans["q6"],ans["style"]] and len(ans["interests"])>0:
-    # build user vector
+    # Build user vectors
     mode_vec = defaultdict(int)
     for key in ["q1","q2","q3","q4","q5","q6"]:
         for k,v in MODE_MAP.get(ans[key], {}).items():
             mode_vec[k] += v
-    max_possible = 2*6
+    max_possible = 2*6  # 6 mode-questions × max 2 points each
     user_mode = {m: (mode_vec[m]/max_possible) for m in WORK_MODES}
-    user_interests = set(ans["interests"])
-    user_style = ans["style"]
+    user_interests = {x.strip().lower() for x in ans["interests"]}
+    user_style = ans["style"].strip().lower()
 
-    df = pd.read_csv("data/programs.csv")
+    # Load programs (cached)
+    df = load_programs()
 
     def row_mode_vec(row):
         mv = defaultdict(int)
-        for t in str(row["tags_work_modes"]).split(","):
+        for t in str(row.get("tags_work_modes","")).split(","):
             t=t.strip().lower()
-            if t in WORK_MODES: mv[t]+=1
+            if t in WORK_MODES:
+                mv[t] += 1
         total = sum(mv.values())
         return {m: (mv[m]/total if total else 0.0) for m in WORK_MODES}
 
     def interest_overlap(row):
-        tags = {x.strip().lower() for x in str(row["tags_interests"]).split(",")}
+        tags = {x.strip().lower() for x in str(row.get("tags_interests","")).split(",") if x.strip()}
         return len(user_interests & tags) / max(1, len(user_interests))
 
     def style_fit(row):
-        styles = {x.strip().lower() for x in str(row["study_style"]).split(",")}
+        styles = {x.strip().lower() for x in str(row.get("study_style","")).split(",") if x.strip()}
         return 1.0 if user_style in styles else 0.0
 
+    # Score programs
     scored = []
     for _,r in df.iterrows():
         pmode = row_mode_vec(r)
-        mode_fit = cosine(user_mode, pmode)                   # 0..1
-        i_fit = interest_overlap(r)                           # 0..1
-        s_fit = style_fit(r)                                  # 0 or 1
-        final = 70*mode_fit + 20*i_fit + 10*s_fit             # 0..100
+        mode_fit = cosine(user_mode, pmode)         # 0..1
+        i_fit = interest_overlap(r)                  # 0..1
+        s_fit = style_fit(r)                         # 0 or 1
+        final = 70*mode_fit + 20*i_fit + 10*s_fit   # 0..100
         scored.append((final, mode_fit, i_fit, s_fit, r))
     scored.sort(key=lambda x: x[0], reverse=True)
     top = scored[:6]
 
+    # Display
     top_modes = sorted(user_mode.items(), key=lambda x: x[1], reverse=True)[:3]
     st.subheader("Your identity snapshot")
     st.write("You lean towards: " + ", ".join([f"{m} {round(v*100)}%" for m,v in top_modes]) + ".")
@@ -103,21 +116,30 @@ if go and None not in [ans["q1"],ans["q2"],ans["q3"],ans["q4"],ans["q5"],ans["q6
     st.subheader("Suggested programs")
     for score, mfit, ifit, sfit, r in top:
         why = f"mode fit {round(mfit*100)}%, interests {round(ifit*100)}%, study style {'✓' if sfit==1 else '—'}"
-        link = r.get("link", "")
-        name = r["program_name"]
-        if isinstance(link, str) and link.startswith("http"):
-            st.markdown(f"- [{name}]({link}) — {r['institution']} ({r['country']}) · {r['level']}  \n  why: {why}")
+        link = str(r.get("link",""))
+        name = str(r.get("program_name","Program"))
+        inst = str(r.get("institution",""))
+        country = str(r.get("country",""))
+        level = str(r.get("level",""))
+        line = f"- {name} — {inst} ({country}) · {level}  \n  why: {why}"
+        if link.startswith("http"):
+            st.markdown(f"- [{name}]({link}) — {inst} ({country}) · {level}  \n  why: {why}")
         else:
-            st.markdown(f"- {name} — {r['institution']} ({r['country']}) · {r['level']}  \n  why: {why}")
+            st.markdown(line)
 
-    nus = [x for x in top if "nus" in str(x[4]["institution"]).lower()]
+    nus = [x for x in top if "nus" in str(x[4].get("institution","")).lower()]
     if nus:
         st.subheader("NUS matches")
         for score, mfit, ifit, sfit, r in nus:
-            st.markdown(f"- {r['program_name']} • modules: {r['example_modules']} • roles: {r['example_roles']}")
+            st.markdown(f"- {r.get('program_name','')} • modules: {r.get('example_modules','')} • roles: {r.get('example_roles','')}")
 
+    # Downloadable mini report
     report = "Identity snapshot: " + ", ".join([f"{m} {round(v*100)}%" for m,v in top_modes]) + "\n\n"
-    report += "Top suggestions:\n" + "\n".join([f"- {x[4]['program_name']} — {x[4]['institution']} ({x[4]['country']})" for x in top])
+    report += "Top suggestions:\n" + "\n".join([f"- {x[4].get('program_name','')} — {x[4].get('institution','')} ({x[4].get('country','')})" for x in top])
     st.download_button("Download my mini report", report, file_name="identity_major_report.txt")
+
+    # Quick restart button
+    if st.button("Start over"):
+        st.rerun()
 else:
     st.info("Answer all fields to see results.")
