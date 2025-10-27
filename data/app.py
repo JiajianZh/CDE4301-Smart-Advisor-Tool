@@ -1,7 +1,9 @@
-import streamlit as st
-import pandas as pd
+import os
 import math
 from collections import defaultdict
+
+import streamlit as st
+import pandas as pd
 
 st.set_page_config(page_title="Identity-Based Major Advisor", page_icon="🎓", layout="centered")
 st.title("Identity-Based Major Advisor")
@@ -26,7 +28,6 @@ QUESTIONS = [
     ("Preferred study style", ["lab","studio","theory","project"])
 ]
 
-# Each option adds weights to work modes
 MODE_MAP = {
     "Fix a machine":{"builder":2,"systems":1},
     "Interview users":{"people":2,"creative":1},
@@ -46,11 +47,51 @@ MODE_MAP = {
 }
 
 def cosine(a: dict, b: dict) -> float:
-    # a and b are dicts with keys = WORK_MODES and values = floats
     dot = sum(a.get(k,0)*b.get(k,0) for k in WORK_MODES)
     na = math.sqrt(sum((a.get(k,0))**2 for k in WORK_MODES))
     nb = math.sqrt(sum((b.get(k,0))**2 for k in WORK_MODES))
     return 0.0 if na == 0 or nb == 0 else dot / (na * nb)
+
+# -------- LLM explainer (optional; runs only if key is present) --------
+def llm_explain(identity_text: str, top_rows: list[dict]) -> str | None:
+    api_key = os.getenv("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY")
+    if not api_key:
+        return None
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key)
+
+        programs_bullets = "\n".join(
+            [f"- {r['program_name']} — {r['institution']} ({r['country']}) · {r['level']} "
+             f"(modes: {r['tags_work_modes']}; modules: {r['example_modules']}; roles: {r['example_roles']})"
+             for r in top_rows]
+        )
+        system = (
+            "You are an academic advising assistant. "
+            "Only use the facts provided. If something is unknown, say 'not enough info'. "
+            "Be concise and plain-English."
+        )
+        user = f"""
+Identity snapshot:
+{identity_text}
+
+Candidate programs (facts you may reference):
+{programs_bullets}
+
+Write 4–6 sentences:
+1) One-sentence summary of why these programs fit this identity.
+2) One sentence per program explaining the fit, grounded in the facts given.
+3) Suggest one concrete next step (e.g., try a module/CCA/info chat).
+"""
+        resp = client.chat.completions.create(
+            model="gpt-4o-mini",
+            temperature=0.2,
+            messages=[{"role":"system","content":system},{"role":"user","content":user}],
+        )
+        return resp.choices[0].message.content.strip()
+    except Exception as e:
+        st.caption(f"(AI explanation unavailable: {e})")
+        return None
 
 # -------- UI --------
 with st.form("quiz"):
@@ -63,6 +104,7 @@ with st.form("quiz"):
     ans["q6"] = st.radio(*QUESTIONS[5], index=None)
     ans["interests"] = st.multiselect(QUESTIONS[6][0], QUESTIONS[6][1], max_selections=2)
     ans["style"] = st.radio(*QUESTIONS[7], index=None)
+    about = st.text_area("Optional: tell us about yourself (projects/modules you liked, CCAs, goals)", placeholder="e.g., enjoyed ME2162 and prototyping club; want hands-on roles in aviation")
     go = st.form_submit_button("See my matches")
 
 if go and None not in [ans["q1"],ans["q2"],ans["q3"],ans["q4"],ans["q5"],ans["q6"],ans["style"]] and len(ans["interests"])>0:
@@ -71,7 +113,7 @@ if go and None not in [ans["q1"],ans["q2"],ans["q3"],ans["q4"],ans["q5"],ans["q6
     for key in ["q1","q2","q3","q4","q5","q6"]:
         for k,v in MODE_MAP.get(ans[key], {}).items():
             mode_vec[k] += v
-    max_possible = 2*6  # 6 mode-questions × max 2 points each
+    max_possible = 2*6
     user_mode = {m: (mode_vec[m]/max_possible) for m in WORK_MODES}
     user_interests = {x.strip().lower() for x in ans["interests"]}
     user_style = ans["style"].strip().lower()
@@ -121,11 +163,10 @@ if go and None not in [ans["q1"],ans["q2"],ans["q3"],ans["q4"],ans["q5"],ans["q6
         inst = str(r.get("institution",""))
         country = str(r.get("country",""))
         level = str(r.get("level",""))
-        line = f"- {name} — {inst} ({country}) · {level}  \n  why: {why}"
         if link.startswith("http"):
             st.markdown(f"- [{name}]({link}) — {inst} ({country}) · {level}  \n  why: {why}")
         else:
-            st.markdown(line)
+            st.markdown(f"- {name} — {inst} ({country}) · {level}  \n  why: {why}")
 
     nus = [x for x in top if "nus" in str(x[4].get("institution","")).lower()]
     if nus:
@@ -138,7 +179,26 @@ if go and None not in [ans["q1"],ans["q2"],ans["q3"],ans["q4"],ans["q5"],ans["q6
     report += "Top suggestions:\n" + "\n".join([f"- {x[4].get('program_name','')} — {x[4].get('institution','')} ({x[4].get('country','')})" for x in top])
     st.download_button("Download my mini report", report, file_name="identity_major_report.txt")
 
-    # Quick restart button
+    # Optional AI explanation (uses secrets; skipped if no key)
+    identity_text = (
+        "Top modes: " + ", ".join([f"{m} {round(v*100)}%" for m,v in top_modes]) +
+        ". Interests: " + ", ".join(sorted(user_interests)) +
+        f". Study style: {user_style}. " + (about or "")
+    )
+    top_dicts = [{
+        "program_name": str(r.get("program_name","")),
+        "institution": str(r.get("institution","")),
+        "country": str(r.get("country","")),
+        "level": str(r.get("level","")),
+        "tags_work_modes": str(r.get("tags_work_modes","")),
+        "example_modules": str(r.get("example_modules","")),
+        "example_roles": str(r.get("example_roles","")),
+    } for _,_,_,_,r in top]
+    llm_text = llm_explain(identity_text, top_dicts)
+    if llm_text:
+        st.subheader("Why these fit (AI)")
+        st.write(llm_text)
+
     if st.button("Start over"):
         st.rerun()
 else:
