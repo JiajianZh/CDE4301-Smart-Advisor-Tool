@@ -18,31 +18,64 @@ def load_programs():
 WORK_MODES = ["builder","analyst","people","creative","researcher","operator","systems"]
 
 QUESTIONS = [
-    ("You’d rather…", ["Fix a machine","Interview users"]),
-    ("You enjoy…", ["Data deep dives","Visual design sprints"]),
-    ("You value more…", ["Real-world impact now","Research depth"]),
-    ("You prefer…", ["Structured checklists","Open-ended exploration"]),
-    ("Club website scenario: you would…", ["Code backend","Run user tests","Project manage","Design UI","Analyze traffic"]),
-    ("You like systems that are…", ["Physical & tangible","Digital & informational"]),
+    # Q1: weekend build-a-thon roles
+    ("Your team signs up for a weekend build-a-thon. Which roles do you actually want to take on?",
+     ["Prototype hardware", "Design screens/UX", "Interview potential users", "Build the data pipeline", "Coordinate tasks & timeline", "None of these"]),
+    # Q2: club website scenario
+    ("Club website scenario: hands on deck—what would you pick up first?",
+     ["Code backend", "Run user tests", "Project manage", "Design UI", "Analyze traffic", "None of these"]),
+    # Q3: capstone project style
+    ("For your capstone, which project style sounds most you?",
+     ["Lab experiments with equipment", "Fieldwork with stakeholders", "Theoretical modelling & proofs", "Business case with ops plan", "System integration across tools", "None of these"]),
+    # Q4: how you organise work
+    ("When you organise work, which approach feels natural?",
+     ["Checklists & SOPs", "Explore ideas then refine", "Analyse datasets for insight", "Design the overall architecture", "None of these"]),
+    # Q5: what energises you
+    ("In a long project, what consistently energises you?",
+     ["Hands-on building and testing", "Making things clearer for people", "Finding patterns in messy data", "Crafting visuals & interactions", "None of these"]),
+    # Q6: when things break
+    ("When something breaks, which troubleshooting path do you instinctively start with?",
+     ["Debug circuitry/mechanics", "Trace code/data flows", "Talk to users to understand context", "Re-organise process/workflow", "None of these"]),
 ]
 
+
 MODE_MAP = {
-    "Fix a machine":{"builder":2,"systems":1},
-    "Interview users":{"people":2,"creative":1},
-    "Data deep dives":{"analyst":2,"systems":1},
-    "Visual design sprints":{"creative":2,"people":1},
-    "Real-world impact now":{"operator":2,"builder":1},
-    "Research depth":{"researcher":2,"analyst":1},
-    "Structured checklists":{"operator":2,"systems":1},
-    "Open-ended exploration":{"creative":2,"researcher":1},
-    "Code backend":{"analyst":2,"systems":1},
-    "Run user tests":{"people":2,"analyst":1},
-    "Project manage":{"operator":2,"people":1},
-    "Design UI":{"creative":2,"people":1},
-    "Analyze traffic":{"analyst":2,"systems":1},
-    "Physical & tangible":{"builder":2,"systems":1},
-    "Digital & informational":{"analyst":2,"researcher":1},
+    # Q1 build-a-thon
+    "Prototype hardware": {"builder": 2, "systems": 1},
+    "Design screens/UX": {"creative": 2, "people": 1},
+    "Interview potential users": {"people": 2, "analyst": 1},
+    "Build the data pipeline": {"analyst": 2, "systems": 1},
+    "Coordinate tasks & timeline": {"operator": 2, "people": 1},
+    # Q2 club website
+    "Code backend": {"analyst": 2, "systems": 1},
+    "Run user tests": {"people": 2, "analyst": 1},
+    "Project manage": {"operator": 2, "people": 1},
+    "Design UI": {"creative": 2, "people": 1},
+    "Analyze traffic": {"analyst": 2, "systems": 1},
+    # Q3 capstone style
+    "Lab experiments with equipment": {"builder": 2, "researcher": 1},
+    "Fieldwork with stakeholders": {"people": 2, "operator": 1},
+    "Theoretical modelling & proofs": {"researcher": 2, "analyst": 1},
+    "Business case with ops plan": {"operator": 2, "analyst": 1},
+    "System integration across tools": {"systems": 2, "builder": 1},
+    # Q4 organise work
+    "Checklists & SOPs": {"operator": 2, "systems": 1},
+    "Explore ideas then refine": {"creative": 2, "researcher": 1},
+    "Analyse datasets for insight": {"analyst": 2, "systems": 1},
+    "Design the overall architecture": {"systems": 2, "analyst": 1},
+    # Q5 energisers
+    "Hands-on building and testing": {"builder": 2, "systems": 1},
+    "Making things clearer for people": {"people": 2, "operator": 1},
+    "Finding patterns in messy data": {"analyst": 2, "researcher": 1},
+    "Crafting visuals & interactions": {"creative": 2, "people": 1},
+    # Q6 when things break
+    "Debug circuitry/mechanics": {"builder": 2, "systems": 1},
+    "Trace code/data flows": {"analyst": 2, "systems": 1},
+    "Talk to users to understand context": {"people": 2, "analyst": 1},
+    "Re-organise process/workflow": {"operator": 2, "systems": 1},
 }
+IGNORES = {"None of these"}  # selected options that add no weight
+
 
 # Lightweight keyword mapping for the open-ended box (no API needed)
 TEXT_KEYWORDS = {
@@ -105,29 +138,42 @@ Write 3–5 sentences summarising why these fit, referencing the modes shown.
 # ---- UI ----
 with st.form("quiz"):
     ans = {}
-    ans["q1"] = st.radio(*QUESTIONS[0], index=None)
-    ans["q2"] = st.radio(*QUESTIONS[1], index=None)
-    ans["q3"] = st.radio(*QUESTIONS[2], index=None)
-    ans["q4"] = st.radio(*QUESTIONS[3], index=None)
-    ans["q5"] = st.radio(*QUESTIONS[4], index=None)
-    ans["q6"] = st.radio(*QUESTIONS[5], index=None)
-    about = st.text_area("Optional: tell us about yourself (projects/modules you liked, CCAs, goals)",
-                         placeholder="e.g., built a robot arm; enjoy Python data work; led a design club")
+    # multiselect (max 2) for each scenario question
+    for i, (prompt, choices) in enumerate(QUESTIONS, start=1):
+        ans[f"q{i}"] = st.multiselect(prompt, choices, max_selections=2, key=f"q{i}")
+    about = st.text_area(
+        "Optional: tell us about yourself (projects/modules you liked, CCAs, goals)",
+        placeholder="e.g., built a robot arm; enjoy Python data work; led a design club"
+    )
     go = st.form_submit_button("See my matches")
 
-if go and None not in [ans["q1"],ans["q2"],ans["q3"],ans["q4"],ans["q5"],ans["q6"]]:
-    # MCQ vector
-    mode_vec = defaultdict(int)
-    for key in ["q1","q2","q3","q4","q5","q6"]:
-        for k,v in MODE_MAP.get(ans[key], {}).items():
-            mode_vec[k] += v
-    # Text influence
-    text_vec = extract_modes_from_text(about)
-    for m in WORK_MODES:
-        mode_vec[m] += text_vec.get(m, 0)
-    # Normalize
-    max_possible = 2*6 + 6
-    user_mode = {m: (mode_vec[m]/max_possible) for m in WORK_MODES}
+if go:
+    # ensure each question has at least one selection (or 'None of these')
+    if any(len(ans[f"q{i}"]) == 0 for i in range(1, len(QUESTIONS)+1)):
+        st.info("Make a selection for each question (you can choose up to two, or 'None of these').")
+    else:
+        mode_vec = defaultdict(int)
+
+        # accumulate weights from all selected options
+        for i in range(1, len(QUESTIONS)+1):
+            for choice in ans[f"q{i}"]:
+                if choice in IGNORES:
+                    continue
+                for k, v in MODE_MAP.get(choice, {}).items():
+                    mode_vec[k] += v
+
+        # add open-text influence (same function as before)
+        text_vec = extract_modes_from_text(about)
+        for m in WORK_MODES:
+            mode_vec[m] += text_vec.get(m, 0)
+
+        # normalise: each question can contribute up to 2 options (each roughly weight ~2)
+        # 6 questions * 2 options * 2 points = 24, plus text scale (~6)
+        max_possible = 24 + 6
+        user_mode = {m: (mode_vec[m]/max_possible) for m in WORK_MODES}
+
+        # ... keep the rest of your scoring/display code unchanged ...
+
 
     # Load programmes and score
     df = load_programs()
