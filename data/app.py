@@ -7,14 +7,14 @@ import pandas as pd
 
 st.set_page_config(page_title="Identity-Based Major Advisor", page_icon="🎓", layout="centered")
 st.title("Identity-Based Major Advisor")
-st.write("Answer a few quick questions. We’ll infer your work-mode profile and suggest programs (incl. NUS).")
+st.write("Answer a few quick questions. We’ll infer your work-mode profile and suggest NUS programmes.")
 
-# -------- Cached data loader (faster reloads) --------
-@st.cache_data(ttl=3600, show_spinner=False)  # cache CSV for 1 hour
+# ---- Data loader (expects: id, program_name, institution, tags_work_modes) ----
+@st.cache_data(ttl=3600, show_spinner=False)
 def load_programs():
     return pd.read_csv("data/programs.csv")
 
-# -------- Config --------
+# ---- Config ----
 WORK_MODES = ["builder","analyst","people","creative","researcher","operator","systems"]
 
 QUESTIONS = [
@@ -24,8 +24,6 @@ QUESTIONS = [
     ("You prefer…", ["Structured checklists","Open-ended exploration"]),
     ("Club website scenario: you would…", ["Code backend","Run user tests","Project manage","Design UI","Analyze traffic"]),
     ("You like systems that are…", ["Physical & tangible","Digital & informational"]),
-    ("Pick up to two interests", ["manufacturing","energy","health","software","finance","climate","transport","design","analytics","operations"]),
-    ("Preferred study style", ["lab","studio","theory","project"])
 ]
 
 MODE_MAP = {
@@ -46,13 +44,37 @@ MODE_MAP = {
     "Digital & informational":{"analyst":2,"researcher":1},
 }
 
+# Lightweight keyword mapping for the open-ended box (no API needed)
+TEXT_KEYWORDS = {
+    "builder": ["prototype","hardware","tooling","fabrication","manufactur","mech","hands-on","lab","robot","cad","solidworks","autocad","arduino"],
+    "analyst": ["data","model","analysis","statistics","analytics","excel","sql","python"," r ","matlab","forecast","optimi","quant"],
+    "people": ["interview","users","stakeholder","team","client","community","lead","mentor","volunteer","club"],
+    "creative": ["design","ui","ux","sketch","figma","aesthet","visual","brand","story","media"],
+    "researcher": ["paper","research","experiment","hypothesis","literature","study","theory","journal","simulation"],
+    "operator": ["process","ops","operations","sop","checklist","maintenance","logistics","supply","safety","compliance"],
+    "systems": ["system","architecture","workflow","pipeline","integration","platform","network","infrastructure"],
+}
+
+def extract_modes_from_text(text: str) -> dict:
+    vec = defaultdict(int)
+    t = (text or "").lower()
+    for mode, kws in TEXT_KEYWORDS.items():
+        for kw in kws:
+            if kw in t:
+                vec[mode] += 1
+    hits = sum(vec.values())
+    if hits == 0:
+        return {m: 0 for m in WORK_MODES}
+    scale = 6  # about one MCQ worth of influence
+    return {m: (vec[m] / hits) * scale for m in WORK_MODES}
+
 def cosine(a: dict, b: dict) -> float:
     dot = sum(a.get(k,0)*b.get(k,0) for k in WORK_MODES)
     na = math.sqrt(sum((a.get(k,0))**2 for k in WORK_MODES))
     nb = math.sqrt(sum((b.get(k,0))**2 for k in WORK_MODES))
     return 0.0 if na == 0 or nb == 0 else dot / (na * nb)
 
-# -------- LLM explainer (optional; runs only if key is present) --------
+# Optional AI explanation (only if key is present; matching does NOT use LLM)
 def llm_explain(identity_text: str, top_rows: list[dict]) -> str | None:
     api_key = os.getenv("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY")
     if not api_key:
@@ -60,32 +82,19 @@ def llm_explain(identity_text: str, top_rows: list[dict]) -> str | None:
     try:
         from openai import OpenAI
         client = OpenAI(api_key=api_key)
-
-        programs_bullets = "\n".join(
-            [f"- {r['program_name']} — {r['institution']} ({r['country']}) · {r['level']} "
-             f"(modes: {r['tags_work_modes']}; modules: {r['example_modules']}; roles: {r['example_roles']})"
-             for r in top_rows]
-        )
-        system = (
-            "You are an academic advising assistant. "
-            "Only use the facts provided. If something is unknown, say 'not enough info'. "
-            "Be concise and plain-English."
-        )
+        bullets = "\n".join([f"- {r['program_name']} — {r['institution']} (modes: {r['tags_work_modes']})" for r in top_rows])
+        system = "You are an academic advising assistant. Be concise, plain-English, and use only provided facts."
         user = f"""
 Identity snapshot:
 {identity_text}
 
-Candidate programs (facts you may reference):
-{programs_bullets}
+Programmes:
+{bullets}
 
-Write 4–6 sentences:
-1) One-sentence summary of why these programs fit this identity.
-2) One sentence per program explaining the fit, grounded in the facts given.
-3) Suggest one concrete next step (e.g., try a module/CCA/info chat).
+Write 3–5 sentences summarising why these fit, referencing the modes shown.
 """
         resp = client.chat.completions.create(
-            model="gpt-4o-mini",
-            temperature=0.2,
+            model="gpt-4o-mini", temperature=0.2,
             messages=[{"role":"system","content":system},{"role":"user","content":user}],
         )
         return resp.choices[0].message.content.strip()
@@ -93,7 +102,7 @@ Write 4–6 sentences:
         st.caption(f"(AI explanation unavailable: {e})")
         return None
 
-# -------- UI --------
+# ---- UI ----
 with st.form("quiz"):
     ans = {}
     ans["q1"] = st.radio(*QUESTIONS[0], index=None)
@@ -102,23 +111,25 @@ with st.form("quiz"):
     ans["q4"] = st.radio(*QUESTIONS[3], index=None)
     ans["q5"] = st.radio(*QUESTIONS[4], index=None)
     ans["q6"] = st.radio(*QUESTIONS[5], index=None)
-    ans["interests"] = st.multiselect(QUESTIONS[6][0], QUESTIONS[6][1], max_selections=2)
-    ans["style"] = st.radio(*QUESTIONS[7], index=None)
-    about = st.text_area("Optional: tell us about yourself (projects/modules you liked, CCAs, goals)", placeholder="e.g., enjoyed ME2162 and prototyping club; want hands-on roles in aviation")
+    about = st.text_area("Optional: tell us about yourself (projects/modules you liked, CCAs, goals)",
+                         placeholder="e.g., built a robot arm; enjoy Python data work; led a design club")
     go = st.form_submit_button("See my matches")
 
-if go and None not in [ans["q1"],ans["q2"],ans["q3"],ans["q4"],ans["q5"],ans["q6"],ans["style"]] and len(ans["interests"])>0:
-    # Build user vectors
+if go and None not in [ans["q1"],ans["q2"],ans["q3"],ans["q4"],ans["q5"],ans["q6"]]:
+    # MCQ vector
     mode_vec = defaultdict(int)
     for key in ["q1","q2","q3","q4","q5","q6"]:
         for k,v in MODE_MAP.get(ans[key], {}).items():
             mode_vec[k] += v
-    max_possible = 2*6
+    # Text influence
+    text_vec = extract_modes_from_text(about)
+    for m in WORK_MODES:
+        mode_vec[m] += text_vec.get(m, 0)
+    # Normalize
+    max_possible = 2*6 + 6
     user_mode = {m: (mode_vec[m]/max_possible) for m in WORK_MODES}
-    user_interests = {x.strip().lower() for x in ans["interests"]}
-    user_style = ans["style"].strip().lower()
 
-    # Load programs (cached)
+    # Load programmes and score
     df = load_programs()
 
     def row_mode_vec(row):
@@ -130,70 +141,29 @@ if go and None not in [ans["q1"],ans["q2"],ans["q3"],ans["q4"],ans["q5"],ans["q6
         total = sum(mv.values())
         return {m: (mv[m]/total if total else 0.0) for m in WORK_MODES}
 
-    def interest_overlap(row):
-        tags = {x.strip().lower() for x in str(row.get("tags_interests","")).split(",") if x.strip()}
-        return len(user_interests & tags) / max(1, len(user_interests))
-
-    def style_fit(row):
-        styles = {x.strip().lower() for x in str(row.get("study_style","")).split(",") if x.strip()}
-        return 1.0 if user_style in styles else 0.0
-
-    # Score programs
     scored = []
-    for _,r in df.iterrows():
+    for _, r in df.iterrows():
         pmode = row_mode_vec(r)
-        mode_fit = cosine(user_mode, pmode)         # 0..1
-        i_fit = interest_overlap(r)                  # 0..1
-        s_fit = style_fit(r)                         # 0 or 1
-        final = 70*mode_fit + 20*i_fit + 10*s_fit   # 0..100
-        scored.append((final, mode_fit, i_fit, s_fit, r))
+        mode_fit = cosine(user_mode, pmode)   # 0..1
+        scored.append((100*mode_fit, mode_fit, r))
     scored.sort(key=lambda x: x[0], reverse=True)
     top = scored[:6]
 
-    # Display
+    # Identity snapshot
     top_modes = sorted(user_mode.items(), key=lambda x: x[1], reverse=True)[:3]
     st.subheader("Your identity snapshot")
     st.write("You lean towards: " + ", ".join([f"{m} {round(v*100)}%" for m,v in top_modes]) + ".")
 
-    st.subheader("Suggested programs")
-    for score, mfit, ifit, sfit, r in top:
-        why = f"mode fit {round(mfit*100)}%, interests {round(ifit*100)}%, study style {'✓' if sfit==1 else '—'}"
-        link = str(r.get("link",""))
-        name = str(r.get("program_name","Program"))
-        inst = str(r.get("institution",""))
-        country = str(r.get("country",""))
-        level = str(r.get("level",""))
-        if link.startswith("http"):
-            st.markdown(f"- [{name}]({link}) — {inst} ({country}) · {level}  \n  why: {why}")
-        else:
-            st.markdown(f"- {name} — {inst} ({country}) · {level}  \n  why: {why}")
+    # Suggestions
+    st.subheader("Suggested programmes")
+    for score, mfit, r in top:
+        prog_modes = [t.strip() for t in str(r.get("tags_work_modes","")).split(",") if t.strip()]
+        why = f"mode match {round(mfit*100)}% • programme modes: {', '.join(prog_modes[:3])}"
+        st.markdown(f"- {r.get('program_name','Program')} — {r.get('institution','')}  \n  why: {why}")
 
-    nus = [x for x in top if "nus" in str(x[4].get("institution","")).lower()]
-    if nus:
-        st.subheader("NUS matches")
-        for score, mfit, ifit, sfit, r in nus:
-            st.markdown(f"- {r.get('program_name','')} • modules: {r.get('example_modules','')} • roles: {r.get('example_roles','')}")
-
-    # Downloadable mini report
-    report = "Identity snapshot: " + ", ".join([f"{m} {round(v*100)}%" for m,v in top_modes]) + "\n\n"
-    report += "Top suggestions:\n" + "\n".join([f"- {x[4].get('program_name','')} — {x[4].get('institution','')} ({x[4].get('country','')})" for x in top])
-    st.download_button("Download my mini report", report, file_name="identity_major_report.txt")
-
-    # Optional AI explanation (uses secrets; skipped if no key)
-    identity_text = (
-        "Top modes: " + ", ".join([f"{m} {round(v*100)}%" for m,v in top_modes]) +
-        ". Interests: " + ", ".join(sorted(user_interests)) +
-        f". Study style: {user_style}. " + (about or "")
-    )
-    top_dicts = [{
-        "program_name": str(r.get("program_name","")),
-        "institution": str(r.get("institution","")),
-        "country": str(r.get("country","")),
-        "level": str(r.get("level","")),
-        "tags_work_modes": str(r.get("tags_work_modes","")),
-        "example_modules": str(r.get("example_modules","")),
-        "example_roles": str(r.get("example_roles","")),
-    } for _,_,_,_,r in top]
+    # Optional AI blurb
+    identity_text = "Top modes: " + ", ".join([f"{m} {round(v*100)}%" for m,v in top_modes]) + ". " + (about or "")
+    top_dicts = [{"program_name": str(r.get("program_name","")), "institution": str(r.get("institution","")), "tags_work_modes": str(r.get("tags_work_modes",""))} for _,_,r in top]
     llm_text = llm_explain(identity_text, top_dicts)
     if llm_text:
         st.subheader("Why these fit (AI)")
@@ -202,4 +172,4 @@ if go and None not in [ans["q1"],ans["q2"],ans["q3"],ans["q4"],ans["q5"],ans["q6
     if st.button("Start over"):
         st.rerun()
 else:
-    st.info("Answer all fields to see results.")
+    st.info("Answer all MCQs to see results (the text box is optional).")
