@@ -1,221 +1,543 @@
-import os
-import math
-from collections import defaultdict
+"""
+Smart Advisor Tool - NUS Programme Recommendation System
+Final Year Project by Jiajian (Mechanical Engineering, NUS CDE)
+
+This application helps pre-university students discover NUS undergraduate programmes
+that match their interests and values using the RIASEC framework.
+"""
 
 import streamlit as st
 import pandas as pd
+import plotly.graph_objects as go
+import plotly.express as px
+from typing import Dict, List, Tuple
+import os
 
-st.set_page_config(page_title="Identity-Based Major Advisor", page_icon="🎓", layout="centered")
-st.title("Identity-Based Major Advisor")
-st.write("Answer a few quick questions. We’ll infer your work-mode profile and suggest NUS programmes.")
+# Page configuration
+st.set_page_config(
+    page_title="NUS Smart Advisor",
+    page_icon="🎓",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# ---- Data loader (expects: id, program_name, institution, tags_work_modes) ----
-@st.cache_data(ttl=3600, show_spinner=False)
-def load_programs():
-    return pd.read_csv("data/programs.csv")
+# Custom CSS for better styling
+st.markdown("""
+<style>
+    .main-header {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #003D7C;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+    .sub-header {
+        font-size: 1.2rem;
+        color: #666;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    .stProgress > div > div > div > div {
+        background-color: #003D7C;
+    }
+    .recommendation-card {
+        background-color: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 10px;
+        border-left: 5px solid #003D7C;
+        margin-bottom: 1rem;
+    }
+    .score-badge {
+        background-color: #003D7C;
+        color: white;
+        padding: 0.3rem 0.8rem;
+        border-radius: 15px;
+        font-weight: bold;
+        display: inline-block;
+        margin-left: 0.5rem;
+    }
+    .riasec-badge {
+        background-color: #e9ecef;
+        color: #495057;
+        padding: 0.2rem 0.6rem;
+        border-radius: 5px;
+        font-size: 0.85rem;
+        margin: 0.2rem;
+        display: inline-block;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-# ---- Config ----
-WORK_MODES = ["builder","analyst","people","creative","researcher","operator","systems"]
-
-QUESTIONS = [
-    # Q1: weekend build-a-thon roles
-    ("Your team signs up for a weekend build-a-thon. Which roles do you actually want to take on?",
-     ["Prototype hardware", "Design screens/UX", "Interview potential users", "Build the data pipeline", "Coordinate tasks & timeline", "None of these"]),
-    # Q2: club website scenario
-    ("Club website scenario: hands on deck—what would you pick up first?",
-     ["Code backend", "Run user tests", "Project manage", "Design UI", "Analyze traffic", "None of these"]),
-    # Q3: capstone project style
-    ("For your capstone, which project style sounds most you?",
-     ["Lab experiments with equipment", "Fieldwork with stakeholders", "Theoretical modelling & proofs", "Business case with ops plan", "System integration across tools", "None of these"]),
-    # Q4: how you organise work
-    ("When you organise work, which approach feels natural?",
-     ["Checklists & SOPs", "Explore ideas then refine", "Analyse datasets for insight", "Design the overall architecture", "None of these"]),
-    # Q5: what energises you
-    ("In a long project, what consistently energises you?",
-     ["Hands-on building and testing", "Making things clearer for people", "Finding patterns in messy data", "Crafting visuals & interactions", "None of these"]),
-    # Q6: when things break
-    ("When something breaks, which troubleshooting path do you instinctively start with?",
-     ["Debug circuitry/mechanics", "Trace code/data flows", "Talk to users to understand context", "Re-organise process/workflow", "None of these"]),
-]
-
-
-MODE_MAP = {
-    # Q1 build-a-thon
-    "Prototype hardware": {"builder": 2, "systems": 1},
-    "Design screens/UX": {"creative": 2, "people": 1},
-    "Interview potential users": {"people": 2, "analyst": 1},
-    "Build the data pipeline": {"analyst": 2, "systems": 1},
-    "Coordinate tasks & timeline": {"operator": 2, "people": 1},
-    # Q2 club website
-    "Code backend": {"analyst": 2, "systems": 1},
-    "Run user tests": {"people": 2, "analyst": 1},
-    "Project manage": {"operator": 2, "people": 1},
-    "Design UI": {"creative": 2, "people": 1},
-    "Analyze traffic": {"analyst": 2, "systems": 1},
-    # Q3 capstone style
-    "Lab experiments with equipment": {"builder": 2, "researcher": 1},
-    "Fieldwork with stakeholders": {"people": 2, "operator": 1},
-    "Theoretical modelling & proofs": {"researcher": 2, "analyst": 1},
-    "Business case with ops plan": {"operator": 2, "analyst": 1},
-    "System integration across tools": {"systems": 2, "builder": 1},
-    # Q4 organise work
-    "Checklists & SOPs": {"operator": 2, "systems": 1},
-    "Explore ideas then refine": {"creative": 2, "researcher": 1},
-    "Analyse datasets for insight": {"analyst": 2, "systems": 1},
-    "Design the overall architecture": {"systems": 2, "analyst": 1},
-    # Q5 energisers
-    "Hands-on building and testing": {"builder": 2, "systems": 1},
-    "Making things clearer for people": {"people": 2, "operator": 1},
-    "Finding patterns in messy data": {"analyst": 2, "researcher": 1},
-    "Crafting visuals & interactions": {"creative": 2, "people": 1},
-    # Q6 when things break
-    "Debug circuitry/mechanics": {"builder": 2, "systems": 1},
-    "Trace code/data flows": {"analyst": 2, "systems": 1},
-    "Talk to users to understand context": {"people": 2, "analyst": 1},
-    "Re-organise process/workflow": {"operator": 2, "systems": 1},
-}
-IGNORES = {"None of these"}  # selected options that add no weight
-
-
-# Lightweight keyword mapping for the open-ended box (no API needed)
-TEXT_KEYWORDS = {
-    "builder": ["prototype","hardware","tooling","fabrication","manufactur","mech","hands-on","lab","robot","cad","solidworks","autocad","arduino"],
-    "analyst": ["data","model","analysis","statistics","analytics","excel","sql","python"," r ","matlab","forecast","optimi","quant"],
-    "people": ["interview","users","stakeholder","team","client","community","lead","mentor","volunteer","club"],
-    "creative": ["design","ui","ux","sketch","figma","aesthet","visual","brand","story","media"],
-    "researcher": ["paper","research","experiment","hypothesis","literature","study","theory","journal","simulation"],
-    "operator": ["process","ops","operations","sop","checklist","maintenance","logistics","supply","safety","compliance"],
-    "systems": ["system","architecture","workflow","pipeline","integration","platform","network","infrastructure"],
-}
-
-def extract_modes_from_text(text: str) -> dict:
-    vec = defaultdict(int)
-    t = (text or "").lower()
-    for mode, kws in TEXT_KEYWORDS.items():
-        for kw in kws:
-            if kw in t:
-                vec[mode] += 1
-    hits = sum(vec.values())
-    if hits == 0:
-        return {m: 0 for m in WORK_MODES}
-    scale = 6  # about one MCQ worth of influence
-    return {m: (vec[m] / hits) * scale for m in WORK_MODES}
-
-def cosine(a: dict, b: dict) -> float:
-    dot = sum(a.get(k,0)*b.get(k,0) for k in WORK_MODES)
-    na = math.sqrt(sum((a.get(k,0))**2 for k in WORK_MODES))
-    nb = math.sqrt(sum((b.get(k,0))**2 for k in WORK_MODES))
-    return 0.0 if na == 0 or nb == 0 else dot / (na * nb)
-
-# Optional AI explanation (only if key is present; matching does NOT use LLM)
-def llm_explain(identity_text: str, top_rows: list[dict]) -> str | None:
-    api_key = os.getenv("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY")
-    if not api_key:
-        return None
+# Load data function with caching
+@st.cache_data
+def load_data():
+    """Load the Excel data file"""
     try:
-        from openai import OpenAI
-        client = OpenAI(api_key=api_key)
-        bullets = "\n".join([f"- {r['program_name']} — {r['institution']} (modes: {r['tags_work_modes']})" for r in top_rows])
-        system = "You are an academic advising assistant. Be concise, plain-English, and use only provided facts."
-        user = f"""
-Identity snapshot:
-{identity_text}
-
-Programmes:
-{bullets}
-
-Write 3–5 sentences summarising why these fit, referencing the modes shown.
-"""
-        resp = client.chat.completions.create(
-            model="gpt-4o-mini", temperature=0.2,
-            messages=[{"role":"system","content":system},{"role":"user","content":user}],
-        )
-        return resp.choices[0].message.content.strip()
+        # Try relative path first (for deployment)
+        data_path = 'data/SmartAdvisorTool_Data_V2_COMPLETE.xlsx'
+        if not os.path.exists(data_path):
+            # Try current directory
+            data_path = 'SmartAdvisorTool_Data_V2_COMPLETE.xlsx'
+        
+        questions_df = pd.read_excel(data_path, sheet_name='Questions')
+        programmes_df = pd.read_excel(data_path, sheet_name='Programmes')
+        values_df = pd.read_excel(data_path, sheet_name='Values_Mapping')
+        riasec_desc_df = pd.read_excel(data_path, sheet_name='RIASEC_Descriptions')
+        
+        return questions_df, programmes_df, values_df, riasec_desc_df
     except Exception as e:
-        st.caption(f"(AI explanation unavailable: {e})")
-        return None
+        st.error(f"Error loading data: {e}")
+        st.stop()
 
-# ---- UI ----
-with st.form("quiz"):
-    ans = {}
-    # multiselect (max 2) for each scenario question
-    for i, (prompt, choices) in enumerate(QUESTIONS, start=1):
-        ans[f"q{i}"] = st.multiselect(prompt, choices, max_selections=2, key=f"q{i}")
-    about = st.text_area(
-        "Optional: tell us about yourself (projects/modules you liked, CCAs, goals)",
-        placeholder="e.g., built a robot arm; enjoy Python data work; led a design club"
+# RIASEC type full names
+RIASEC_NAMES = {
+    'R': 'Realistic',
+    'I': 'Investigative', 
+    'A': 'Artistic',
+    'S': 'Social',
+    'E': 'Enterprising',
+    'C': 'Conventional'
+}
+
+# Initialize session state
+def init_session_state():
+    """Initialize session state variables"""
+    if 'page' not in st.session_state:
+        st.session_state.page = 'welcome'
+    if 'responses' not in st.session_state:
+        st.session_state.responses = {}
+    if 'current_question' not in st.session_state:
+        st.session_state.current_question = 0
+    if 'results' not in st.session_state:
+        st.session_state.results = None
+
+def calculate_riasec_scores(responses: Dict[str, int], questions_df: pd.DataFrame) -> Dict[str, float]:
+    """Calculate RIASEC scores from questionnaire responses"""
+    riasec_scores = {'R': 0, 'I': 0, 'A': 0, 'S': 0, 'E': 0, 'C': 0}
+    
+    # Interest questions (Q1-Q24: 4 questions per RIASEC type)
+    for q_id, response in responses.items():
+        if q_id.startswith('Q') and int(q_id[1:]) <= 24:
+            question = questions_df[questions_df['Question_ID'] == q_id].iloc[0]
+            riasec_type = question['RIASEC_Type']
+            # Scale: 1-5 (Strongly Disagree to Strongly Agree)
+            riasec_scores[riasec_type] += response
+    
+    # Normalize scores (0-100 scale)
+    for code in riasec_scores:
+        # Max score per type = 4 questions × 5 points = 20
+        riasec_scores[code] = (riasec_scores[code] / 20) * 100
+    
+    return riasec_scores
+
+def get_top_riasec(riasec_scores: Dict[str, float], n: int = 3) -> List[str]:
+    """Get top N RIASEC codes sorted by score"""
+    sorted_codes = sorted(riasec_scores.items(), key=lambda x: x[1], reverse=True)
+    return [code for code, score in sorted_codes[:n]]
+
+def get_top_values(responses: Dict[str, int], n: int = 3) -> List[str]:
+    """Extract top values from questions Q25-Q29"""
+    value_responses = {}
+    value_mapping = {
+        'Q25': 'high-salary',
+        'Q26': 'helping-people',
+        'Q27': 'creativity',
+        'Q28': 'technology',
+        'Q29': 'work-life-balance'
+    }
+    
+    for q_id in ['Q25', 'Q26', 'Q27', 'Q28', 'Q29']:
+        if q_id in responses:
+            value_responses[value_mapping[q_id]] = responses[q_id]
+    
+    # Sort by score and get top N
+    sorted_values = sorted(value_responses.items(), key=lambda x: x[1], reverse=True)
+    return [value for value, score in sorted_values[:n]]
+
+def match_programmes(riasec_scores: Dict[str, float], top_values: List[str], 
+                    programmes_df: pd.DataFrame, top_n: int = 8) -> pd.DataFrame:
+    """
+    Match programmes using weighted RIASEC scoring
+    
+    Scoring system:
+    - Student's 1st RIASEC matches Programme Primary: +3 points
+    - Student's 1st RIASEC matches Programme Secondary: +2 points
+    - Student's 2nd RIASEC matches Programme Primary: +2 points
+    - Student's 2nd RIASEC matches Programme Secondary: +1 point
+    - Student's 2nd RIASEC matches Programme Tertiary: +0.5 points
+    - Student's top value matches Programme value tag: +1 point per match
+    """
+    top_riasec = get_top_riasec(riasec_scores, n=2)
+    
+    scores = []
+    for idx, row in programmes_df.iterrows():
+        score = 0
+        match_details = []
+        
+        # RIASEC matching
+        prog_primary = row['Primary_RIASEC']
+        prog_secondary = row['Secondary_RIASEC']
+        prog_tertiary = row['Tertiary_RIASEC'] if pd.notna(row['Tertiary_RIASEC']) else None
+        
+        # Student's 1st RIASEC
+        if top_riasec[0] == prog_primary:
+            score += 3
+            match_details.append(f"Your top interest ({RIASEC_NAMES[top_riasec[0]]}) matches the programme's primary focus")
+        elif top_riasec[0] == prog_secondary:
+            score += 2
+            match_details.append(f"Your top interest ({RIASEC_NAMES[top_riasec[0]]}) matches a key component")
+        
+        # Student's 2nd RIASEC
+        if len(top_riasec) > 1:
+            if top_riasec[1] == prog_primary:
+                score += 2
+                match_details.append(f"Your secondary interest ({RIASEC_NAMES[top_riasec[1]]}) matches the programme's primary focus")
+            elif top_riasec[1] == prog_secondary:
+                score += 1
+                match_details.append(f"Your secondary interest ({RIASEC_NAMES[top_riasec[1]]}) matches a component")
+            elif prog_tertiary and top_riasec[1] == prog_tertiary:
+                score += 0.5
+                match_details.append(f"Your secondary interest ({RIASEC_NAMES[top_riasec[1]]}) aligns with programme aspects")
+        
+        # Value matching
+        if pd.notna(row['Value_Tags']):
+            prog_values = [v.strip() for v in str(row['Value_Tags']).split(',')]
+            value_matches = []
+            for val in top_values:
+                if val in prog_values:
+                    score += 1
+                    value_matches.append(val)
+            if value_matches:
+                match_details.append(f"Shares your values: {', '.join(value_matches)}")
+        
+        scores.append({
+            'Programme_ID': row['Programme_ID'],
+            'Programme_Name': row['Programme_Name'],
+            'Faculty': row['Faculty'],
+            'Primary_RIASEC': prog_primary,
+            'Secondary_RIASEC': prog_secondary,
+            'Tertiary_RIASEC': prog_tertiary,
+            'Value_Tags': row['Value_Tags'],
+            'Match_Score': score,
+            'Match_Details': match_details
+        })
+    
+    # Convert to DataFrame and sort by score
+    results_df = pd.DataFrame(scores)
+    results_df = results_df.sort_values('Match_Score', ascending=False).head(top_n)
+    
+    return results_df
+
+def show_welcome_page():
+    """Display welcome page"""
+    st.markdown('<div class="main-header">🎓 NUS Smart Advisor</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">Discover Your Best-Fit NUS Undergraduate Programme</div>', unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
+        st.markdown("""
+        ### Welcome! 👋
+        
+        This tool will help you discover NUS undergraduate programmes that match your:
+        - **Interests** (what you enjoy doing)
+        - **Work Style** (how you like to work)
+        - **Values** (what matters to you in a career)
+        
+        #### How it works:
+        1. **Answer 29 questions** (takes about 5-7 minutes)
+        2. **Get your RIASEC profile** (your interest type)
+        3. **See your top 8 programme matches** with explanations
+        
+        #### What is RIASEC?
+        RIASEC is a research-backed framework that identifies 6 interest types:
+        - **R**ealistic - hands-on, mechanical work
+        - **I**nvestigative - research, analysis
+        - **A**rtistic - creative expression
+        - **S**ocial - helping people
+        - **E**nterprising - leading, persuading
+        - **C**onventional - organizing, data
+        
+        ---
+        """)
+        
+        st.info("💡 **Tip:** Answer honestly based on what genuinely interests you, not what you think you *should* like.")
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        if st.button("🚀 Start Questionnaire", type="primary", use_container_width=True):
+            st.session_state.page = 'questionnaire'
+            st.rerun()
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        with st.expander("📊 About This Tool"):
+            st.markdown("""
+            This Smart Advisor Tool was developed as a Final Year Project by Jiajian 
+            (Mechanical Engineering, NUS CDE) to help pre-university students make 
+            informed decisions about their programme choices.
+            
+            The tool uses:
+            - **Holland's RIASEC Theory** for interest assessment
+            - **Person-Environment Fit** research for matching
+            - Data on all **75 NUS undergraduate programmes**
+            
+            All recommendations are based on academic research in career counseling 
+            and vocational psychology.
+            """)
+
+def show_questionnaire_page(questions_df):
+    """Display questionnaire page"""
+    st.markdown('<div class="main-header">📝 Questionnaire</div>', unsafe_allow_html=True)
+    
+    # Progress bar
+    total_questions = len(questions_df)
+    current = st.session_state.current_question
+    progress = current / total_questions
+    
+    st.progress(progress)
+    st.markdown(f"**Question {current + 1} of {total_questions}**")
+    
+    # Display current question
+    question = questions_df.iloc[current]
+    q_id = question['Question_ID']
+    category = question['Category']
+    text = question['Question_Text']
+    
+    st.markdown(f"### {category}")
+    st.markdown(f"*{text}*")
+    
+    # Response options
+    response = st.radio(
+        "How much do you agree with this statement?",
+        options=[1, 2, 3, 4, 5],
+        format_func=lambda x: {
+            1: "Strongly Disagree",
+            2: "Disagree", 
+            3: "Neutral",
+            4: "Agree",
+            5: "Strongly Agree"
+        }[x],
+        index=st.session_state.responses.get(q_id, 3) - 1,
+        key=f"q_{q_id}",
+        horizontal=True
     )
-    go = st.form_submit_button("See my matches")
+    
+    # Navigation buttons
+    col1, col2, col3 = st.columns([1, 1, 1])
+    
+    with col1:
+        if current > 0:
+            if st.button("⬅️ Previous", use_container_width=True):
+                st.session_state.current_question -= 1
+                st.rerun()
+    
+    with col2:
+        if st.button("🏠 Back to Home", use_container_width=True):
+            if st.session_state.responses:
+                confirm = st.warning("⚠️ You will lose your progress. Are you sure?")
+            st.session_state.page = 'welcome'
+            st.session_state.responses = {}
+            st.session_state.current_question = 0
+            st.rerun()
+    
+    with col3:
+        if current < total_questions - 1:
+            if st.button("Next ➡️", type="primary", use_container_width=True):
+                st.session_state.responses[q_id] = response
+                st.session_state.current_question += 1
+                st.rerun()
+        else:
+            if st.button("✅ See Results", type="primary", use_container_width=True):
+                st.session_state.responses[q_id] = response
+                st.session_state.page = 'results'
+                st.rerun()
 
-if go:
-    # ensure each question has at least one selection (or 'None of these')
-    if any(len(ans[f"q{i}"]) == 0 for i in range(1, len(QUESTIONS)+1)):
-        st.info("Make a selection for each question (you can choose up to two, or 'None of these').")
-    else:
-        mode_vec = defaultdict(int)
+def show_results_page(questions_df, programmes_df, riasec_desc_df):
+    """Display results page"""
+    st.markdown('<div class="main-header">🎯 Your Results</div>', unsafe_allow_html=True)
+    
+    # Calculate scores
+    riasec_scores = calculate_riasec_scores(st.session_state.responses, questions_df)
+    top_riasec = get_top_riasec(riasec_scores, n=3)
+    top_values = get_top_values(st.session_state.responses, n=3)
+    
+    # Match programmes
+    matches = match_programmes(riasec_scores, top_values, programmes_df, top_n=8)
+    
+    # Display RIASEC Profile
+    st.markdown("## 📊 Your RIASEC Profile")
+    
+    col1, col2 = st.columns([1, 1])
+    
+    with col1:
+        # Radar chart
+        categories = list(RIASEC_NAMES.values())
+        scores = [riasec_scores[code] for code in RIASEC_NAMES.keys()]
+        
+        fig = go.Figure(data=go.Scatterpolar(
+            r=scores,
+            theta=categories,
+            fill='toself',
+            fillcolor='rgba(0, 61, 124, 0.2)',
+            line=dict(color='#003D7C', width=2)
+        ))
+        
+        fig.update_layout(
+            polar=dict(
+                radialaxis=dict(
+                    visible=True,
+                    range=[0, 100]
+                )
+            ),
+            showlegend=False,
+            height=400
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        st.markdown("### Your Top Interests:")
+        for i, code in enumerate(top_riasec, 1):
+            name = RIASEC_NAMES[code]
+            score = riasec_scores[code]
+            desc = riasec_desc_df[riasec_desc_df['Code'] == code].iloc[0]['Description']
+            
+            st.markdown(f"""
+            **{i}. {name} ({code}) - {score:.1f}%**  
+            {desc}
+            """)
+        
+        st.markdown("### Your Top Values:")
+        for i, value in enumerate(top_values, 1):
+            st.markdown(f"{i}. {value.replace('-', ' ').title()}")
+    
+    st.markdown("---")
+    
+    # Display programme recommendations
+    st.markdown("## 🎓 Your Top Programme Matches")
+    st.markdown("*These programmes best align with your interests and values*")
+    
+    for idx, row in matches.iterrows():
+        with st.container():
+            st.markdown(f"""
+            <div class="recommendation-card">
+                <h3>{row['Programme_Name']} 
+                    <span class="score-badge">Match: {row['Match_Score']:.1f} points</span>
+                </h3>
+                <p><strong>Faculty:</strong> {row['Faculty']}</p>
+                <p>
+                    <strong>RIASEC Profile:</strong> 
+                    <span class="riasec-badge">{row['Primary_RIASEC']} - {RIASEC_NAMES[row['Primary_RIASEC']]}</span>
+                    <span class="riasec-badge">{row['Secondary_RIASEC']} - {RIASEC_NAMES[row['Secondary_RIASEC']]}</span>
+                    {f'<span class="riasec-badge">{row["Tertiary_RIASEC"]} - {RIASEC_NAMES[row["Tertiary_RIASEC"]]}</span>' if pd.notna(row['Tertiary_RIASEC']) else ''}
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            with st.expander("📋 Why this match?"):
+                st.markdown("**Match Reasons:**")
+                for detail in row['Match_Details']:
+                    st.markdown(f"- {detail}")
+                
+                st.markdown(f"\n**Programme Values:** {row['Value_Tags']}")
+    
+    st.markdown("---")
+    
+    # Action buttons
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("🔄 Retake Quiz", use_container_width=True):
+            st.session_state.page = 'welcome'
+            st.session_state.responses = {}
+            st.session_state.current_question = 0
+            st.rerun()
+    
+    with col2:
+        # Export results
+        results_text = f"""NUS SMART ADVISOR - YOUR RESULTS
+        
+YOUR RIASEC PROFILE:
+1. {RIASEC_NAMES[top_riasec[0]]} ({riasec_scores[top_riasec[0]]:.1f}%)
+2. {RIASEC_NAMES[top_riasec[1]]} ({riasec_scores[top_riasec[1]]:.1f}%)
+3. {RIASEC_NAMES[top_riasec[2]]} ({riasec_scores[top_riasec[2]]:.1f}%)
 
-        # accumulate weights from all selected options
-        for i in range(1, len(QUESTIONS)+1):
-            for choice in ans[f"q{i}"]:
-                if choice in IGNORES:
-                    continue
-                for k, v in MODE_MAP.get(choice, {}).items():
-                    mode_vec[k] += v
+YOUR TOP VALUES:
+{', '.join([v.replace('-', ' ').title() for v in top_values])}
 
-        # add open-text influence (same function as before)
-        text_vec = extract_modes_from_text(about)
-        for m in WORK_MODES:
-            mode_vec[m] += text_vec.get(m, 0)
+YOUR TOP PROGRAMME MATCHES:
+"""
+        for idx, row in matches.iterrows():
+            results_text += f"\n{idx + 1}. {row['Programme_Name']} ({row['Faculty']}) - Match Score: {row['Match_Score']:.1f}\n"
+        
+        st.download_button(
+            label="📥 Download Results",
+            data=results_text,
+            file_name="nus_smart_advisor_results.txt",
+            mime="text/plain",
+            use_container_width=True
+        )
+    
+    with col3:
+        if st.button("ℹ️ About Results", use_container_width=True):
+            st.info("""
+            **How matching works:**
+            - Your top 2 RIASEC interests are matched against each programme's profile
+            - Primary matches score higher than secondary matches
+            - Your values are matched against programme characteristics
+            - Programmes are ranked by total match score
+            
+            **Next steps:**
+            - Research your top matches on the NUS website
+            - Talk to current students in these programmes
+            - Consider your academic strengths and interests
+            - Apply to programmes that excite you!
+            """)
 
-        # normalise: each question can contribute up to 2 options (each roughly weight ~2)
-        # 6 questions * 2 options * 2 points = 24, plus text scale (~6)
-        max_possible = 24 + 6
-        user_mode = {m: (mode_vec[m]/max_possible) for m in WORK_MODES}
+def main():
+    """Main application logic"""
+    init_session_state()
+    
+    # Load data
+    questions_df, programmes_df, values_df, riasec_desc_df = load_data()
+    
+    # Sidebar
+    with st.sidebar:
+        st.image("https://via.placeholder.com/150x50/003D7C/FFFFFF?text=NUS", width=150)
+        st.markdown("### Navigation")
+        
+        if st.button("🏠 Home", use_container_width=True):
+            st.session_state.page = 'welcome'
+            st.rerun()
+        
+        st.markdown("---")
+        st.markdown("### About")
+        st.markdown("""
+        **Smart Advisor Tool**  
+        Version 1.0
+        
+        Developed by Jiajian  
+        (Mechanical Engineering, NUS CDE)
+        
+        Final Year Project 2025/26
+        """)
+        
+        st.markdown("---")
+        st.markdown("### Quick Stats")
+        st.metric("Total Programmes", len(programmes_df))
+        st.metric("Questions", len(questions_df))
+        
+        if st.session_state.responses:
+            st.metric("Progress", f"{len(st.session_state.responses)}/{len(questions_df)}")
+    
+    # Main content
+    if st.session_state.page == 'welcome':
+        show_welcome_page()
+    elif st.session_state.page == 'questionnaire':
+        show_questionnaire_page(questions_df)
+    elif st.session_state.page == 'results':
+        show_results_page(questions_df, programmes_df, riasec_desc_df)
 
-        # ... keep the rest of your scoring/display code unchanged ...
-
-
-    # Load programmes and score
-    df = load_programs()
-
-    def row_mode_vec(row):
-        mv = defaultdict(int)
-        for t in str(row.get("tags_work_modes","")).split(","):
-            t=t.strip().lower()
-            if t in WORK_MODES:
-                mv[t] += 1
-        total = sum(mv.values())
-        return {m: (mv[m]/total if total else 0.0) for m in WORK_MODES}
-
-    scored = []
-    for _, r in df.iterrows():
-        pmode = row_mode_vec(r)
-        mode_fit = cosine(user_mode, pmode)   # 0..1
-        scored.append((100*mode_fit, mode_fit, r))
-    scored.sort(key=lambda x: x[0], reverse=True)
-    top = scored[:6]
-
-    # Identity snapshot
-    top_modes = sorted(user_mode.items(), key=lambda x: x[1], reverse=True)[:3]
-    st.subheader("Your identity snapshot")
-    st.write("You lean towards: " + ", ".join([f"{m} {round(v*100)}%" for m,v in top_modes]) + ".")
-
-    # Suggestions
-    st.subheader("Suggested programmes")
-    for score, mfit, r in top:
-        prog_modes = [t.strip() for t in str(r.get("tags_work_modes","")).split(",") if t.strip()]
-        why = f"mode match {round(mfit*100)}% • programme modes: {', '.join(prog_modes[:3])}"
-        st.markdown(f"- {r.get('program_name','Program')} — {r.get('institution','')}  \n  why: {why}")
-
-    # Optional AI blurb
-    identity_text = "Top modes: " + ", ".join([f"{m} {round(v*100)}%" for m,v in top_modes]) + ". " + (about or "")
-    top_dicts = [{"program_name": str(r.get("program_name","")), "institution": str(r.get("institution","")), "tags_work_modes": str(r.get("tags_work_modes",""))} for _,_,r in top]
-    llm_text = llm_explain(identity_text, top_dicts)
-    if llm_text:
-        st.subheader("Why these fit (AI)")
-        st.write(llm_text)
-
-    if st.button("Start over"):
-        st.rerun()
-else:
-    st.info("Answer all MCQs to see results (the text box is optional).")
+if __name__ == "__main__":
+    main()
