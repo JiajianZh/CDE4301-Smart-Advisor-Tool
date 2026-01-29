@@ -351,10 +351,6 @@ def show_questionnaire_page(questions_df):
         horizontal=False  # FIXED: Vertical layout
     )
     
-    # Show warning if no selection
-    if response is None:
-        st.warning("⚠️ Please select an option to continue")
-    
     st.markdown("<br>", unsafe_allow_html=True)
     
     # Navigation buttons
@@ -455,28 +451,29 @@ def show_results_page(questions_df, programmes_df, riasec_desc_df):
     st.markdown("*These programmes best align with your interests and values*")
     
     for rank, (idx, row) in enumerate(matches.iterrows(), 1):
-        with st.container():
-            st.markdown(f"""
-            <div class="recommendation-card">
-                <h3>{rank}. {row['Programme_Name']} 
-                    <span class="score-badge">Match: {row['Match_Score']:.1f} points</span>
-                </h3>
-                <p><strong>Faculty:</strong> {row['Faculty']}</p>
-                <p>
-                    <strong>RIASEC Profile:</strong> 
-                    <span class="riasec-badge">{row['Primary_RIASEC']} - {RIASEC_NAMES[row['Primary_RIASEC']]}</span>
-                    <span class="riasec-badge">{row['Secondary_RIASEC']} - {RIASEC_NAMES[row['Secondary_RIASEC']]}</span>
-                    {f'<span class="riasec-badge">{row["Tertiary_RIASEC"]} - {RIASEC_NAMES[row["Tertiary_RIASEC"]]}</span>' if pd.notna(row['Tertiary_RIASEC']) else ''}
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
+        # Programme recommendation card
+        st.markdown(f"""
+        <div class="recommendation-card">
+            <h3>{rank}. {row['Programme_Name']} 
+                <span class="score-badge">Match: {row['Match_Score']:.1f} points</span>
+            </h3>
+            <p><strong>Faculty:</strong> {row['Faculty']}</p>
+            <p>
+                <strong>RIASEC Profile:</strong> 
+                <span class="riasec-badge">{row['Primary_RIASEC']} - {RIASEC_NAMES[row['Primary_RIASEC']]}</span>
+                <span class="riasec-badge">{row['Secondary_RIASEC']} - {RIASEC_NAMES[row['Secondary_RIASEC']]}</span>
+                {f'<span class="riasec-badge">{row["Tertiary_RIASEC"]} - {RIASEC_NAMES[row["Tertiary_RIASEC"]]}</span>' if pd.notna(row['Tertiary_RIASEC']) else ''}
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Expandable match details
+        with st.expander("📋 Why this match?"):
+            st.markdown("**Match Reasons:**")
+            for detail in row['Match_Details']:
+                st.markdown(f"- {detail}")
             
-            with st.expander("📋 Why this match?"):
-                st.markdown("**Match Reasons:**")
-                for detail in row['Match_Details']:
-                    st.markdown(f"- {detail}")
-                
-                st.markdown(f"\n**Programme Values:** {row['Value_Tags']}")
+            st.markdown(f"\n**Programme Values:** {row['Value_Tags']}")
     
     st.markdown("---")
     
