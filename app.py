@@ -65,6 +65,13 @@ st.markdown("""
         margin: 0.2rem;
         display: inline-block;
     }
+    /* Vertical radio buttons */
+    div[role="radiogroup"] {
+        flex-direction: column !important;
+    }
+    div[role="radiogroup"] label {
+        margin-bottom: 0.5rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -112,7 +119,10 @@ def init_session_state():
         st.session_state.results = None
 
 def calculate_riasec_scores(responses: Dict[str, int], questions_df: pd.DataFrame) -> Dict[str, float]:
-    """Calculate RIASEC scores from questionnaire responses"""
+    """
+    Calculate RIASEC scores from questionnaire responses
+    FIXED: Now properly handles neutral (3) as 50% instead of 60%
+    """
     riasec_scores = {'R': 0, 'I': 0, 'A': 0, 'S': 0, 'E': 0, 'C': 0}
     
     # Interest questions (Q1-Q24: 4 questions per RIASEC type)
@@ -121,12 +131,14 @@ def calculate_riasec_scores(responses: Dict[str, int], questions_df: pd.DataFram
             question = questions_df[questions_df['Question_ID'] == q_id].iloc[0]
             riasec_type = question['RIASEC_Type']
             # Scale: 1-5 (Strongly Disagree to Strongly Agree)
-            riasec_scores[riasec_type] += response
+            # Convert to 0-4 scale first, then to percentage
+            riasec_scores[riasec_type] += (response - 1)  # Now 0-4 scale
     
     # Normalize scores (0-100 scale)
     for code in riasec_scores:
-        # Max score per type = 4 questions × 5 points = 20
-        riasec_scores[code] = (riasec_scores[code] / 20) * 100
+        # Max score per type = 4 questions × 4 points = 16
+        # So neutral (3) across all questions = 2*4 = 8, which is 50%
+        riasec_scores[code] = (riasec_scores[code] / 16) * 100
     
     return riasec_scores
 
@@ -157,17 +169,19 @@ def get_top_values(responses: Dict[str, int], n: int = 3) -> List[str]:
 def match_programmes(riasec_scores: Dict[str, float], top_values: List[str], 
                     programmes_df: pd.DataFrame, top_n: int = 8) -> pd.DataFrame:
     """
-    Match programmes using weighted RIASEC scoring
+    Match programmes using IMPROVED weighted RIASEC scoring
     
-    Scoring system:
-    - Student's 1st RIASEC matches Programme Primary: +3 points
-    - Student's 1st RIASEC matches Programme Secondary: +2 points
-    - Student's 2nd RIASEC matches Programme Primary: +2 points
-    - Student's 2nd RIASEC matches Programme Secondary: +1 point
-    - Student's 2nd RIASEC matches Programme Tertiary: +0.5 points
-    - Student's top value matches Programme value tag: +1 point per match
+    IMPROVED Scoring system for better differentiation:
+    - Student's 1st RIASEC matches Programme Primary: +5 points (increased from 3)
+    - Student's 1st RIASEC matches Programme Secondary: +3 points (increased from 2)
+    - Student's 2nd RIASEC matches Programme Primary: +3 points (increased from 2)
+    - Student's 2nd RIASEC matches Programme Secondary: +2 points (increased from 1)
+    - Student's 3rd RIASEC matches Programme Primary: +1 point (NEW)
+    - Student's 2nd RIASEC matches Programme Tertiary: +1 point (increased from 0.5)
+    - Student's top value matches Programme value tag: +1.5 points per match (increased from 1)
+    - Bonus: Top 2 RIASEC both match top 2 programme codes: +2 bonus points (NEW)
     """
-    top_riasec = get_top_riasec(riasec_scores, n=2)
+    top_riasec = get_top_riasec(riasec_scores, n=3)
     
     scores = []
     for idx, row in programmes_df.iterrows():
@@ -181,31 +195,43 @@ def match_programmes(riasec_scores: Dict[str, float], top_values: List[str],
         
         # Student's 1st RIASEC
         if top_riasec[0] == prog_primary:
-            score += 3
+            score += 5
             match_details.append(f"Your top interest ({RIASEC_NAMES[top_riasec[0]]}) matches the programme's primary focus")
         elif top_riasec[0] == prog_secondary:
-            score += 2
+            score += 3
             match_details.append(f"Your top interest ({RIASEC_NAMES[top_riasec[0]]}) matches a key component")
         
         # Student's 2nd RIASEC
         if len(top_riasec) > 1:
             if top_riasec[1] == prog_primary:
-                score += 2
+                score += 3
                 match_details.append(f"Your secondary interest ({RIASEC_NAMES[top_riasec[1]]}) matches the programme's primary focus")
             elif top_riasec[1] == prog_secondary:
-                score += 1
+                score += 2
                 match_details.append(f"Your secondary interest ({RIASEC_NAMES[top_riasec[1]]}) matches a component")
             elif prog_tertiary and top_riasec[1] == prog_tertiary:
-                score += 0.5
+                score += 1
                 match_details.append(f"Your secondary interest ({RIASEC_NAMES[top_riasec[1]]}) aligns with programme aspects")
         
-        # Value matching
+        # Student's 3rd RIASEC
+        if len(top_riasec) > 2:
+            if top_riasec[2] == prog_primary:
+                score += 1
+                match_details.append(f"Your third interest ({RIASEC_NAMES[top_riasec[2]]}) matches the programme focus")
+        
+        # Bonus for perfect top-2 match
+        prog_top2 = [prog_primary, prog_secondary]
+        if len(top_riasec) >= 2 and top_riasec[0] in prog_top2 and top_riasec[1] in prog_top2:
+            score += 2
+            match_details.append("Strong alignment: Your top 2 interests match this programme's core profile")
+        
+        # Value matching (increased weight)
         if pd.notna(row['Value_Tags']):
             prog_values = [v.strip() for v in str(row['Value_Tags']).split(',')]
             value_matches = []
             for val in top_values:
                 if val in prog_values:
-                    score += 1
+                    score += 1.5
                     value_matches.append(val)
             if value_matches:
                 match_details.append(f"Shares your values: {', '.join(value_matches)}")
@@ -287,7 +313,7 @@ def show_welcome_page():
             """)
 
 def show_questionnaire_page(questions_df):
-    """Display questionnaire page"""
+    """Display questionnaire page - IMPROVED with vertical layout and no default"""
     st.markdown('<div class="main-header">📝 Questionnaire</div>', unsafe_allow_html=True)
     
     # Progress bar
@@ -307,21 +333,29 @@ def show_questionnaire_page(questions_df):
     st.markdown(f"### {category}")
     st.markdown(f"*{text}*")
     
-    # Response options
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Response options - FIXED: No default selection, vertical layout
     response = st.radio(
         "How much do you agree with this statement?",
         options=[1, 2, 3, 4, 5],
         format_func=lambda x: {
-            1: "Strongly Disagree",
-            2: "Disagree", 
-            3: "Neutral",
-            4: "Agree",
-            5: "Strongly Agree"
+            1: "😟 Strongly Disagree",
+            2: "🙁 Disagree", 
+            3: "😐 Neutral",
+            4: "🙂 Agree",
+            5: "😃 Strongly Agree"
         }[x],
-        index=st.session_state.responses.get(q_id, 3) - 1,
-        key=f"q_{q_id}",
-        horizontal=True
+        index=None,  # FIXED: No default selection
+        key=f"q_{q_id}_{current}",  # Unique key per question
+        horizontal=False  # FIXED: Vertical layout
     )
+    
+    # Show warning if no selection
+    if response is None:
+        st.warning("⚠️ Please select an option to continue")
+    
+    st.markdown("<br>", unsafe_allow_html=True)
     
     # Navigation buttons
     col1, col2, col3 = st.columns([1, 1, 1])
@@ -335,7 +369,7 @@ def show_questionnaire_page(questions_df):
     with col2:
         if st.button("🏠 Back to Home", use_container_width=True):
             if st.session_state.responses:
-                confirm = st.warning("⚠️ You will lose your progress. Are you sure?")
+                st.warning("⚠️ You will lose your progress. Are you sure?")
             st.session_state.page = 'welcome'
             st.session_state.responses = {}
             st.session_state.current_question = 0
@@ -343,15 +377,17 @@ def show_questionnaire_page(questions_df):
     
     with col3:
         if current < total_questions - 1:
-            if st.button("Next ➡️", type="primary", use_container_width=True):
-                st.session_state.responses[q_id] = response
-                st.session_state.current_question += 1
-                st.rerun()
+            if st.button("Next ➡️", type="primary", use_container_width=True, disabled=(response is None)):
+                if response is not None:
+                    st.session_state.responses[q_id] = response
+                    st.session_state.current_question += 1
+                    st.rerun()
         else:
-            if st.button("✅ See Results", type="primary", use_container_width=True):
-                st.session_state.responses[q_id] = response
-                st.session_state.page = 'results'
-                st.rerun()
+            if st.button("✅ See Results", type="primary", use_container_width=True, disabled=(response is None)):
+                if response is not None:
+                    st.session_state.responses[q_id] = response
+                    st.session_state.page = 'results'
+                    st.rerun()
 
 def show_results_page(questions_df, programmes_df, riasec_desc_df):
     """Display results page"""
@@ -418,11 +454,11 @@ def show_results_page(questions_df, programmes_df, riasec_desc_df):
     st.markdown("## 🎓 Your Top Programme Matches")
     st.markdown("*These programmes best align with your interests and values*")
     
-    for idx, row in matches.iterrows():
+    for rank, (idx, row) in enumerate(matches.iterrows(), 1):
         with st.container():
             st.markdown(f"""
             <div class="recommendation-card">
-                <h3>{row['Programme_Name']} 
+                <h3>{rank}. {row['Programme_Name']} 
                     <span class="score-badge">Match: {row['Match_Score']:.1f} points</span>
                 </h3>
                 <p><strong>Faculty:</strong> {row['Faculty']}</p>
@@ -455,9 +491,9 @@ def show_results_page(questions_df, programmes_df, riasec_desc_df):
             st.rerun()
     
     with col2:
-        # Export results
+        # Export results - FIXED: Remove programme ID numbers
         results_text = f"""NUS SMART ADVISOR - YOUR RESULTS
-        
+
 YOUR RIASEC PROFILE:
 1. {RIASEC_NAMES[top_riasec[0]]} ({riasec_scores[top_riasec[0]]:.1f}%)
 2. {RIASEC_NAMES[top_riasec[1]]} ({riasec_scores[top_riasec[1]]:.1f}%)
@@ -468,8 +504,9 @@ YOUR TOP VALUES:
 
 YOUR TOP PROGRAMME MATCHES:
 """
-        for idx, row in matches.iterrows():
-            results_text += f"\n{idx + 1}. {row['Programme_Name']} ({row['Faculty']}) - Match Score: {row['Match_Score']:.1f}\n"
+        for rank, (idx, row) in enumerate(matches.iterrows(), 1):
+            # FIXED: Use rank number instead of programme ID
+            results_text += f"\n{rank}. {row['Programme_Name']} ({row['Faculty']}) - Match Score: {row['Match_Score']:.1f}\n"
         
         st.download_button(
             label="📥 Download Results",
@@ -483,10 +520,17 @@ YOUR TOP PROGRAMME MATCHES:
         if st.button("ℹ️ About Results", use_container_width=True):
             st.info("""
             **How matching works:**
-            - Your top 2 RIASEC interests are matched against each programme's profile
+            - Your top 3 RIASEC interests are matched against each programme's profile
             - Primary matches score higher than secondary matches
+            - Perfect alignment bonus for top-2 matches
             - Your values are matched against programme characteristics
             - Programmes are ranked by total match score
+            
+            **Scoring scale:**
+            - 10-15 points: Excellent match
+            - 7-10 points: Very good match
+            - 5-7 points: Good match
+            - Below 5 points: Moderate match
             
             **Next steps:**
             - Research your top matches on the NUS website
@@ -504,8 +548,8 @@ def main():
     
     # Sidebar
     with st.sidebar:
-        st.image("https://via.placeholder.com/150x50/003D7C/FFFFFF?text=NUS", width=150)
-        st.markdown("### Navigation")
+        st.markdown("### 🎓 NUS Smart Advisor")
+        st.markdown("---")
         
         if st.button("🏠 Home", use_container_width=True):
             st.session_state.page = 'welcome'
