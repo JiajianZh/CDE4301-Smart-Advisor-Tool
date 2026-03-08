@@ -105,7 +105,193 @@ RIASEC_NAMES = {
     'E': 'Enterprising',
     'C': 'Conventional'
 }
+# ============================================================
+# CDE DRILL-DOWN DATA
+# ============================================================
 
+CDE_PROGRAMMES = [
+    "Architecture",
+    "Biomedical Engineering",
+    "Chemical Engineering",
+    "Civil Engineering",
+    "Computer Engineering",
+    "Electrical Engineering",
+    "Engineering Science",
+    "Environmental and Sustainability Engineering",
+    "Industrial Design",
+    "Industrial and Systems Engineering",
+    "Infrastructure and Project Management",
+    "Landscape Architecture",
+    "Materials Science and Engineering",
+    "Mechanical Engineering",
+    "Robotics and Machine Intelligence"
+]
+
+CDE_IDENTITY_STATEMENTS = {
+    "Architecture": "You are someone who sees the world through space, form and human experience. You thrive when you can blend creative vision with technical precision, turning ideas into physical environments that people live and work in. Your love for design, visual thinking and spatial reasoning makes Architecture a natural fit. Graduates often go on to become licensed architects, urban designers, or design consultants shaping Singapore's and the world's built environment.",
+    
+    "Biomedical Engineering": "You are someone who sits at the intersection of science and humanity — you want technology to heal. You thrive in lab environments where biology meets engineering, solving problems that directly improve patient lives. Your interest in biology, chemistry and medical applications, combined with an engineering mindset, makes Biomedical Engineering your natural home. Graduates often work in medical device companies, hospitals, research institutes or pursue medicine.",
+    
+    "Chemical Engineering": "You are someone who thinks at the molecular level — fascinated by how materials and substances transform and interact. You thrive in lab and process environments, designing systems that turn raw materials into useful products at scale. Your strength in chemistry and mathematics, combined with a love for systematic problem-solving, makes Chemical Engineering a strong fit. Graduates work in pharmaceuticals, petrochemicals, food technology and sustainability sectors.",
+    
+    "Civil Engineering": "You are someone who thinks big — you want to build things that last generations. You thrive when working on large-scale physical challenges, from bridges and tunnels to water systems and transport networks. Your preference for tangible, real-world problems and your interest in mathematics and physics makes Civil Engineering a natural fit. Graduates shape the infrastructure of cities and countries, working with government bodies, construction firms and consultancies.",
+    
+    "Computer Engineering": "You are someone who lives at the boundary of hardware and software — you love understanding how machines think and communicate. You thrive when coding, designing circuits or building systems that bridge the physical and digital worlds. Your passion for computing, electronics and logical problem-solving makes Computer Engineering your natural home. Graduates work in tech companies, semiconductor firms, cybersecurity and embedded systems across the globe.",
+    
+    "Electrical Engineering": "You are someone energised by the invisible forces that power the modern world. You thrive when designing and analysing electrical systems, from power grids to microchips to wireless communications. Your strength in physics and mathematics, combined with a fascination for electronics and energy, makes Electrical Engineering a strong fit. Graduates work in energy, telecommunications, semiconductor and smart systems industries.",
+    
+    "Engineering Science": "You are someone who loves engineering at its most fundamental — you want to understand the deep principles behind how things work before building them. You thrive in intellectually challenging environments that blend mathematics, physics and computational thinking. Your curiosity-driven, analytical mindset makes Engineering Science a natural fit. Graduates are highly versatile, going into research, finance, data science, defence technology and advanced engineering roles.",
+    
+    "Environmental and Sustainability Engineering": "You are someone driven by purpose — you want engineering to protect and restore the planet. You thrive when working on challenges that sit at the intersection of technical solutions and environmental impact, from clean water systems to carbon reduction. Your interest in environmental science, chemistry and sustainability makes this programme a natural fit. Graduates work in environmental consultancies, government agencies, green energy firms and international organisations.",
+    
+    "Industrial Design": "You are someone who believes great design improves everyday life. You thrive in creative studio environments, sketching, prototyping and refining products that are both beautiful and functional. Your blend of artistic sensibility, human empathy and technical curiosity makes Industrial Design a natural fit. Graduates work as product designers, UX designers and innovation consultants in consumer electronics, furniture, healthcare and lifestyle industries.",
+    
+    "Industrial and Systems Engineering": "You are someone who sees inefficiency as a problem worth solving. You thrive when optimising complex systems — whether it's a supply chain, a hospital workflow or a manufacturing process. Your analytical mindset, love for data and ability to see the big picture makes Industrial and Systems Engineering a natural fit. Graduates work in operations, logistics, consulting, data analytics and management roles across virtually every industry.",
+    
+    "Infrastructure and Project Management": "You are someone who makes things happen at scale. You thrive when coordinating large teams, managing timelines and budgets, and delivering complex projects from vision to reality. Your strength in planning, systems thinking and leadership makes Infrastructure and Project Management a natural fit. Graduates become project managers, quantity surveyors and construction consultants, delivering major infrastructure projects across Singapore and beyond.",
+    
+    "Landscape Architecture": "You are someone who sees nature and human spaces as inseparable. You thrive when designing outdoor environments — parks, waterfronts, green corridors — that balance ecological health with human wellbeing. Your love for spatial design, environmental sensitivity and creative thinking makes Landscape Architecture a natural fit. Graduates work with urban planning agencies, landscape consultancies and environmental design firms shaping liveable cities.",
+    
+    "Materials Science and Engineering": "You are someone fascinated by what things are made of and why they behave the way they do. You thrive in lab environments, experimenting with metals, polymers, ceramics and composites to unlock new material properties. Your interest in chemistry, physics and hands-on experimentation makes Materials Science and Engineering a natural fit. Graduates work in semiconductor, aerospace, biomedical and advanced manufacturing industries.",
+    
+    "Mechanical Engineering": "You are someone who sees the world as a system of forces, motion and energy waiting to be harnessed. You thrive when designing, building and testing physical things — from engines and robots to medical devices and renewable energy systems. Your love for physics, mathematics and hands-on making makes Mechanical Engineering a natural fit. Graduates are among the most versatile engineers, working across aerospace, automotive, robotics, energy and manufacturing industries.",
+    
+    "Robotics and Machine Intelligence": "You are someone captivated by the idea of machines that can sense, think and act. You thrive at the cutting edge — combining mechanical engineering, electronics and artificial intelligence to build systems that were once science fiction. Your passion for coding, intelligent systems and pushing boundaries makes Robotics and Machine Intelligence a natural fit. Graduates are at the forefront of automation, AI research, autonomous vehicles and smart manufacturing."
+}
+
+CDE_DRILL_DOWN_QUESTIONS = [
+    {
+        "id": "CDE_Q1",
+        "text": "Which subject genuinely excites you the most?",
+        "options": {
+            "A": ("Mathematics & Physics", {"Mechanical Engineering": 2, "Civil Engineering": 2, "Engineering Science": 2, "Electrical Engineering": 2, "Infrastructure and Project Management": 1}),
+            "B": ("Biology & Chemistry", {"Biomedical Engineering": 2, "Chemical Engineering": 2, "Environmental and Sustainability Engineering": 2}),
+            "C": ("Computing & Electronics", {"Computer Engineering": 2, "Electrical Engineering": 2, "Robotics and Machine Intelligence": 2}),
+            "D": ("Art, Design & Spatial Thinking", {"Architecture": 2, "Landscape Architecture": 2, "Industrial Design": 2}),
+            "E": ("Systems, Statistics & Management", {"Industrial and Systems Engineering": 2, "Infrastructure and Project Management": 2, "Engineering Science": 1})
+        }
+    },
+    {
+        "id": "CDE_Q2",
+        "text": "In school projects, which role do you naturally take on?",
+        "options": {
+            "A": ("Calculating and solving equations", {"Mechanical Engineering": 2, "Civil Engineering": 2, "Engineering Science": 2}),
+            "B": ("Coding and building software or hardware", {"Computer Engineering": 2, "Electrical Engineering": 2, "Robotics and Machine Intelligence": 2}),
+            "C": ("Designing visuals, layouts or models", {"Architecture": 2, "Industrial Design": 2, "Landscape Architecture": 2}),
+            "D": ("Running experiments in a lab", {"Biomedical Engineering": 2, "Chemical Engineering": 2, "Materials Science and Engineering": 2}),
+            "E": ("Planning, organising and coordinating", {"Industrial and Systems Engineering": 2, "Infrastructure and Project Management": 2})
+        }
+    },
+    {
+        "id": "CDE_Q3",
+        "text": "Where would you feel most at home learning?",
+        "options": {
+            "A": ("Workshop or fabrication lab — building physical things", {"Mechanical Engineering": 2, "Materials Science and Engineering": 2, "Civil Engineering": 1}),
+            "B": ("Design studio — sketching, modelling, critiquing", {"Architecture": 2, "Industrial Design": 2, "Landscape Architecture": 2}),
+            "C": ("Computer lab — coding, simulating, analysing data", {"Computer Engineering": 2, "Robotics and Machine Intelligence": 2, "Electrical Engineering": 2, "Industrial and Systems Engineering": 1}),
+            "D": ("Science lab — running experiments, testing samples", {"Biomedical Engineering": 2, "Chemical Engineering": 2, "Environmental and Sustainability Engineering": 2}),
+            "E": ("Field or construction site — real-world environments", {"Civil Engineering": 2, "Infrastructure and Project Management": 2, "Environmental and Sustainability Engineering": 1})
+        }
+    },
+    {
+        "id": "CDE_Q4",
+        "text": "You have one full semester for a project. Which excites you most?",
+        "options": {
+            "A": ("Design and build a working mechanical prototype", {"Mechanical Engineering": 2, "Materials Science and Engineering": 2}),
+            "B": ("Develop an AI system or smart device", {"Robotics and Machine Intelligence": 2, "Computer Engineering": 2, "Electrical Engineering": 1}),
+            "C": ("Design a building or public space from scratch", {"Architecture": 2, "Landscape Architecture": 2, "Industrial Design": 1}),
+            "D": ("Research a solution to an environmental or health problem", {"Biomedical Engineering": 2, "Chemical Engineering": 2, "Environmental and Sustainability Engineering": 2}),
+            "E": ("Optimise a real company's operations or supply chain", {"Industrial and Systems Engineering": 2, "Infrastructure and Project Management": 2, "Engineering Science": 1})
+        }
+    },
+    {
+        "id": "CDE_Q5",
+        "text": "Which problem would you most want to spend your career solving?",
+        "options": {
+            "A": ("Building infrastructure that lasts 100 years", {"Civil Engineering": 2, "Infrastructure and Project Management": 2}),
+            "B": ("Creating machines and products people use daily", {"Mechanical Engineering": 2, "Materials Science and Engineering": 2, "Industrial Design": 2}),
+            "C": ("Making computers, robots and devices smarter", {"Computer Engineering": 2, "Electrical Engineering": 2, "Robotics and Machine Intelligence": 2, "Engineering Science": 1}),
+            "D": ("Improving human health through technology", {"Biomedical Engineering": 2, "Chemical Engineering": 2}),
+            "E": ("Protecting and restoring the natural environment", {"Environmental and Sustainability Engineering": 2, "Landscape Architecture": 2})
+        }
+    },
+    {
+        "id": "CDE_Q6",
+        "text": "Which best describes the kind of work you'd enjoy day-to-day?",
+        "options": {
+            "A": ("Physical and tangible — I can touch and test what I build", {"Mechanical Engineering": 2, "Civil Engineering": 2, "Materials Science and Engineering": 2}),
+            "B": ("Digital and computational — I work through screens and code", {"Computer Engineering": 2, "Electrical Engineering": 2, "Robotics and Machine Intelligence": 2}),
+            "C": ("Visual and spatial — I work with shapes, spaces and aesthetics", {"Architecture": 2, "Landscape Architecture": 2, "Industrial Design": 2}),
+            "D": ("Biological and chemical — I work with living systems or materials", {"Biomedical Engineering": 2, "Chemical Engineering": 2, "Environmental and Sustainability Engineering": 1}),
+            "E": ("Analytical and process-driven — I optimise how systems run", {"Industrial and Systems Engineering": 2, "Engineering Science": 2, "Infrastructure and Project Management": 2})
+        }
+    },
+    {
+        "id": "CDE_Q7",
+        "text": "Which workday sounds most like you?",
+        "options": {
+            "A": ("In a workshop prototyping and testing a new product", {"Mechanical Engineering": 2, "Materials Science and Engineering": 2, "Industrial Design": 1}),
+            "B": ("At a computer designing simulations or writing algorithms", {"Computer Engineering": 2, "Robotics and Machine Intelligence": 2, "Electrical Engineering": 2, "Engineering Science": 1}),
+            "C": ("In a studio presenting design concepts to clients", {"Architecture": 2, "Landscape Architecture": 2, "Industrial Design": 2}),
+            "D": ("In a lab analysing samples or running experiments", {"Biomedical Engineering": 2, "Chemical Engineering": 2, "Environmental and Sustainability Engineering": 2}),
+            "E": ("On a construction site or managing a large project", {"Civil Engineering": 2, "Infrastructure and Project Management": 2})
+        }
+    },
+    {
+        "id": "CDE_Q8",
+        "text": "Which best describes the scale of impact you want to create?",
+        "options": {
+            "A": ("Design a product millions of people use every day", {"Mechanical Engineering": 2, "Industrial Design": 2, "Materials Science and Engineering": 1}),
+            "B": ("Build systems that make cities smarter and more connected", {"Computer Engineering": 2, "Electrical Engineering": 2, "Robotics and Machine Intelligence": 2}),
+            "C": ("Shape the skyline — design buildings and spaces that inspire", {"Architecture": 2, "Landscape Architecture": 2}),
+            "D": ("Save lives through medical devices or treatments", {"Biomedical Engineering": 2, "Chemical Engineering": 2}),
+            "E": ("Solve large-scale environmental or infrastructure challenges", {"Environmental and Sustainability Engineering": 2, "Civil Engineering": 2, "Infrastructure and Project Management": 2})
+        }
+    },
+    {
+        "id": "CDE_Q9",
+        "text": "Which career title appeals to you most in 10 years?",
+        "options": {
+            "A": ("Product or Mechanical Engineer at a manufacturing company", {"Mechanical Engineering": 2, "Materials Science and Engineering": 2}),
+            "B": ("Software, Robotics or AI Engineer at a tech company", {"Computer Engineering": 2, "Robotics and Machine Intelligence": 2, "Electrical Engineering": 1}),
+            "C": ("Architect or Designer shaping built environments", {"Architecture": 2, "Landscape Architecture": 2, "Industrial Design": 2}),
+            "D": ("Biomedical or Process Engineer in healthcare or pharmaceuticals", {"Biomedical Engineering": 2, "Chemical Engineering": 2}),
+            "E": ("Project Manager or Systems Consultant", {"Industrial and Systems Engineering": 2, "Infrastructure and Project Management": 2, "Engineering Science": 1})
+        }
+    },
+    {
+        "id": "CDE_Q10",
+        "text": "Which statement feels most like you?",
+        "options": {
+            "A": ("I am a maker — I love building things that work in the real world", {"Mechanical Engineering": 2, "Civil Engineering": 2, "Materials Science and Engineering": 2}),
+            "B": ("I am a coder/thinker — I love logic, systems and intelligent machines", {"Computer Engineering": 2, "Robotics and Machine Intelligence": 2, "Electrical Engineering": 2, "Engineering Science": 1}),
+            "C": ("I am a creator — I love beauty, space and human-centred design", {"Architecture": 2, "Industrial Design": 2, "Landscape Architecture": 2}),
+            "D": ("I am a healer or scientist — I want technology to improve lives", {"Biomedical Engineering": 2, "Chemical Engineering": 2, "Environmental and Sustainability Engineering": 1}),
+            "E": ("I am an organiser — I love making complex systems run smoothly", {"Industrial and Systems Engineering": 2, "Infrastructure and Project Management": 2})
+        }
+    }
+]
+
+def check_cde_trigger(matches_df: pd.DataFrame) -> bool:
+    """Check if 3+ of top 5 results are CDE programmes"""
+    top_5 = matches_df.head(5)
+    cde_count = sum(1 for _, row in top_5.iterrows() 
+                   if any(cde in row['Programme_Name'] for cde in CDE_PROGRAMMES))
+    return cde_count >= 3
+
+def calculate_cde_scores(cde_responses: Dict[str, str]) -> str:
+    """Calculate best-fit CDE programme from drill-down responses"""
+    programme_scores = {prog: 0 for prog in CDE_PROGRAMMES}
+    
+    for q_id, chosen_option in cde_responses.items():
+        question = next((q for q in CDE_DRILL_DOWN_QUESTIONS if q['id'] == q_id), None)
+        if question and chosen_option in question['options']:
+            _, score_dict = question['options'][chosen_option]
+            for prog, points in score_dict.items():
+                programme_scores[prog] += points
+    
+    best_fit = max(programme_scores, key=programme_scores.get)
+    return best_fit
 # Initialize session state
 def init_session_state():
     """Initialize session state variables"""
@@ -117,6 +303,13 @@ def init_session_state():
         st.session_state.current_question = 0
     if 'results' not in st.session_state:
         st.session_state.results = None
+    if 'cde_responses' not in st.session_state:
+        st.session_state.cde_responses = {}
+    if 'cde_result' not in st.session_state:
+        st.session_state.cde_result = None
+    if 'cde_question_index' not in st.session_state:
+        st.session_state.cde_question_index = 0
+
 
 def calculate_riasec_scores(responses: Dict[str, int], questions_df: pd.DataFrame) -> Dict[str, float]:
     """
@@ -384,6 +577,99 @@ def show_questionnaire_page(questions_df):
                     st.session_state.responses[q_id] = response
                     st.session_state.page = 'results'
                     st.rerun()
+def show_cde_drilldown_page():
+    """CDE drill-down questionnaire page"""
+    st.markdown('<div class="main-header">🔍 CDE Explorer</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">Let\'s find your best-fit CDE programme</div>', unsafe_allow_html=True)
+
+    total = len(CDE_DRILL_DOWN_QUESTIONS)
+    current = st.session_state.cde_question_index
+    progress = current / total
+
+    st.progress(progress)
+    st.markdown(f"**Question {current + 1} of {total}**")
+
+    question = CDE_DRILL_DOWN_QUESTIONS[current]
+    q_id = question['id']
+
+    st.markdown(f"### {question['text']}")
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    options = question['options']
+    option_labels = [f"{key}) {val[0]}" for key, val in options.items()]
+
+    response = st.radio(
+        "Choose the option that feels most like you:",
+        options=list(options.keys()),
+        format_func=lambda x: options[x][0],
+        index=None,
+        key=f"cde_{q_id}_{current}",
+        horizontal=False
+    )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    col1, col2 = st.columns([1, 1])
+
+    with col1:
+        if current > 0:
+            if st.button("⬅️ Previous", use_container_width=True):
+                st.session_state.cde_question_index -= 1
+                st.rerun()
+
+    with col2:
+        if current < total - 1:
+            if st.button("Next ➡️", type="primary", use_container_width=True, disabled=(response is None)):
+                if response is not None:
+                    st.session_state.cde_responses[q_id] = response
+                    st.session_state.cde_question_index += 1
+                    st.rerun()
+        else:
+            if st.button("✅ See My Best-Fit Programme", type="primary", use_container_width=True, disabled=(response is None)):
+                if response is not None:
+                    st.session_state.cde_responses[q_id] = response
+                    st.session_state.cde_result = calculate_cde_scores(st.session_state.cde_responses)
+                    st.session_state.page = 'cde_result'
+                    st.rerun()
+
+def show_cde_result_page():
+    """Show the final CDE drill-down result"""
+    st.markdown('<div class="main-header">🎯 Your Best-Fit CDE Programme</div>', unsafe_allow_html=True)
+
+    best_fit = st.session_state.cde_result
+
+    st.markdown(f"""
+    <div class="recommendation-card">
+        <h2>🏆 {best_fit}</h2>
+        <p style="font-size: 1.1rem; line-height: 1.8;">
+            {CDE_IDENTITY_STATEMENTS[best_fit]}
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("---")
+    st.markdown("### 🔗 What's Next?")
+    st.markdown(f"""
+    - 🌐 [Explore {best_fit} on NUS website](https://www.nus.edu.sg/admissions/undergraduate/programmes.html)
+    - 💬 Talk to current {best_fit} students
+    - 📋 Review your Stage 1 results to see the bigger picture
+    """)
+
+    st.markdown("---")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("⬅️ Back to My Programme Matches", use_container_width=True):
+            st.session_state.page = 'results'
+            st.rerun()
+
+    with col2:
+        if st.button("🔄 Retake CDE Explorer", use_container_width=True):
+            st.session_state.cde_responses = {}
+            st.session_state.cde_result = None
+            st.session_state.cde_question_index = 0
+            st.session_state.page = 'cde_drilldown'
+            st.rerun()
 
 def show_results_page(questions_df, programmes_df, riasec_desc_df):
     """Display results page"""
@@ -476,7 +762,18 @@ def show_results_page(questions_df, programmes_df, riasec_desc_df):
             st.markdown(f"\n**Programme Values:** {row['Value_Tags']}")
     
     st.markdown("---")
+    # CDE Drill-down trigger
+    if check_cde_trigger(matches):
+        st.markdown("---")
+        st.markdown("### 🔍 Want to go deeper?")
+        st.info("**3 or more of your top matches are CDE programmes!** Answer 10 more questions to find your single best-fit CDE programme.")
+        if st.button("🔍 Explore CDE Programmes Further", type="primary", use_container_width=True):
+            st.session_state.cde_responses = {}
+            st.session_state.cde_question_index = 0
+            st.session_state.page = 'cde_drilldown'
+            st.rerun()
     
+    st.markdown("---")
     # Action buttons
     col1, col2, col3 = st.columns(3)
     
@@ -579,6 +876,10 @@ def main():
         show_questionnaire_page(questions_df)
     elif st.session_state.page == 'results':
         show_results_page(questions_df, programmes_df, riasec_desc_df)
+    elif st.session_state.page == 'cde_drilldown':
+        show_cde_drilldown_page()
+    elif st.session_state.page == 'cde_result':
+        show_cde_result_page()
 
 if __name__ == "__main__":
     main()
