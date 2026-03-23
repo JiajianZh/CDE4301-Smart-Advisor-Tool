@@ -1179,20 +1179,22 @@ def get_cluster_for_result(programme_name: str, faculty: str) -> str | None:
 
 
 def check_cluster_trigger(matches_df: pd.DataFrame) -> list:
-    """Return list of cluster keys where 3+ of top 5 results belong to that cluster.
+    """Return list of cluster keys where 2+ of top 8 results belong to that cluster.
 
-    Uses Faculty column (via get_cluster_for_result) for accurate cluster detection."""
-    top_5 = matches_df.head(8)
+    Uses Faculty column (via get_cluster_for_result) for accurate cluster detection.
+    Threshold of 2 (out of 8 shown) ensures smaller clusters like Computing, Sciences
+    and Music can trigger alongside larger ones like CDE."""
+    top_results = matches_df.head(8)
     triggered = []
     cluster_counts = {key: 0 for key in CLUSTER_CONFIG}
 
-    for _, row in top_5.iterrows():
+    for _, row in top_results.iterrows():
         cluster = get_cluster_for_result(row['Programme_Name'], row['Faculty'])
         if cluster:
             cluster_counts[cluster] += 1
 
     for cluster_key, count in cluster_counts.items():
-        if count >= 3:
+        if count >= 2:
             triggered.append(cluster_key)
 
     return triggered
@@ -1542,7 +1544,7 @@ def show_results_page(questions_df, programmes_df, riasec_desc_df):
     if triggered_clusters:
         st.markdown("---")
         st.markdown("### 🔍 Want to go deeper?")
-        st.markdown("*3 or more of your top 8 matches belong to the same faculty — answer 10 more focused questions to find your single best-fit programme within that faculty.*")
+        st.markdown("*2 or more of your top 8 matches belong to the same faculty — answer 10 more focused questions to find your single best-fit programme within that faculty.*")
 
         for cluster_key in triggered_clusters:
             config = CLUSTER_CONFIG[cluster_key]
