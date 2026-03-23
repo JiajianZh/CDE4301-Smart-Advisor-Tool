@@ -863,19 +863,19 @@ SCIENCES_DRILL_DOWN_QUESTIONS = [
 # ============================================================
 
 MUSIC_PROGRAMMES = [
-    "Audio Arts and Sciences", "Brass", "Composition",
-    "Music and Society", "Percussion", "Piano",
-    "String and Harp", "Voice", "Woodwinds"
+    "Audio Arts & Sciences", "Brass", "Composition",
+    "Music & Society/ Music, Collaboration & Production", "Percussion", "Piano",
+    "String & Harp", "Voice", "Woodwinds"
 ]
 
 MUSIC_IDENTITY_STATEMENTS = {
-    "Audio Arts and Sciences": "Based on your responses, you are someone who is as passionate about the technology of sound as the art of it. You thrive at the intersection of music, acoustics and engineering — recording, mixing and shaping sonic experiences. Your love for the technical side of audio production makes Audio Arts and Sciences a natural fit. Graduates work in recording studios, film sound, live events and audio technology.",
+    "Audio Arts & Sciences": "Based on your responses, you are someone who is as passionate about the technology of sound as the art of it. You thrive at the intersection of music, acoustics and engineering — recording, mixing and shaping sonic experiences. Your love for the technical side of audio production makes Audio Arts & Sciences a natural fit. Graduates work in recording studios, film sound, live events and audio technology.",
     "Brass": "Based on your responses, you are someone with a commanding musical presence and a love for the power and brilliance of brass instruments. You thrive in ensemble and orchestral settings where precision, projection and teamwork unite. Your dedication to your instrument and performance craft makes the Brass pathway a natural fit. Graduates pursue orchestral, chamber, military and freelance performance careers.",
     "Composition": "Based on your responses, you are someone who hears music in your head before it exists in the world. You thrive when translating inner musical ideas into scores, digital productions and sonic experiences for others to perform. Your creative drive and musical imagination makes Composition a natural fit. Graduates work as composers for concert music, film, games, theatre and multimedia.",
-    "Music and Society": "Based on your responses, you are someone who sees music not just as art but as a social and cultural force. You thrive exploring how music shapes communities, identities and histories, and how it can be a tool for education and change. Graduates work in music education, arts management, cultural policy, research and community music.",
+    "Music & Society/ Music, Collaboration & Production": "Based on your responses, you are someone who sees music not just as art but as a social and cultural force. You thrive exploring how music shapes communities, identities and histories, and how it can be a tool for education and change. Graduates work in music education, arts management, cultural policy, research and community music.",
     "Percussion": "Based on your responses, you are someone drawn to rhythm, energy and the unique diversity of the percussion world. You thrive in the challenge of mastering an enormous range of instruments and styles across classical, contemporary and world music. Graduates pursue orchestral, chamber, contemporary and cross-genre performance careers.",
     "Piano": "Based on your responses, you are someone with deep connection to the piano as your primary musical voice. You thrive in the demanding, intimate world of solo and collaborative piano performance, combining technical mastery with interpretive depth. Graduates pursue solo performance, collaborative piano, teaching and chamber music careers.",
-    "String and Harp": "Based on your responses, you are someone whose musical identity is inseparable from your instrument — whether violin, viola, cello, double bass or harp. You thrive in the rich traditions of orchestral and chamber music, bringing precision and expressivity to every note. Graduates pursue orchestral, chamber and solo performance careers worldwide.",
+    "String & Harp": "Based on your responses, you are someone whose musical identity is inseparable from your instrument — whether violin, viola, cello, double bass or harp. You thrive in the rich traditions of orchestral and chamber music, bringing precision and expressivity to every note. Graduates pursue orchestral, chamber and solo performance careers worldwide.",
     "Voice": "Based on your responses, you are someone whose instrument is your own body — you communicate music most naturally through singing. You thrive in the interpretive world of vocal performance, drawing audiences into the emotional world of opera, art song and choral music. Graduates pursue opera, oratorio, concert singing and teaching careers.",
     "Woodwinds": "Based on your responses, you are someone with a special connection to the lyrical, expressive world of woodwind instruments. You thrive in the demanding technical and musical requirements of orchestral and chamber playing. Graduates pursue orchestral, chamber, solo and teaching careers across classical and contemporary music."
 }
@@ -886,7 +886,7 @@ MUSIC_DRILL_DOWN_QUESTIONS = [
         "text": "What is your primary instrument or musical focus?",
         "options": {
             "A": ("Piano", {"Piano": 3}),
-            "B": ("A string instrument (violin, viola, cello, double bass) or harp", {"String and Harp": 3}),
+            "B": ("A string instrument (violin, viola, cello, double bass) or harp", {"String & Harp": 3}),
             "C": ("A woodwind instrument (flute, oboe, clarinet, bassoon, saxophone)", {"Woodwinds": 3}),
             "D": ("A brass instrument (trumpet, trombone, French horn, tuba)", {"Brass": 3}),
             "E": ("Percussion or drumkit", {"Percussion": 3})
@@ -898,9 +898,9 @@ MUSIC_DRILL_DOWN_QUESTIONS = [
         "options": {
             "A": ("Singing — classical voice, opera or art song", {"Voice": 3}),
             "B": ("Composing — writing original music for others to perform", {"Composition": 3}),
-            "C": ("Music technology — recording, mixing and producing sound", {"Audio Arts and Sciences": 3}),
-            "D": ("Music in society — education, culture and community", {"Music and Society": 3}),
-            "E": ("My answer above covered it — I am a performer first", {"Piano": 1, "String and Harp": 1, "Woodwinds": 1, "Brass": 1, "Percussion": 1})
+            "C": ("Music technology — recording, mixing and producing sound", {"Audio Arts & Sciences": 3}),
+            "D": ("Music in society — education, culture and community", {"Music & Society/ Music, Collaboration & Production": 3}),
+            "E": ("My answer above covered it — I am a performer first", {"Piano": 1, "String & Harp": 1, "Woodwinds": 1, "Brass": 1, "Percussion": 1})
         }
     },
     {
@@ -908,9 +908,9 @@ MUSIC_DRILL_DOWN_QUESTIONS = [
         "text": "What kind of musical environment do you thrive in?",
         "options": {
             "A": ("Alone at my instrument, practising and perfecting my technique", {"Piano": 2, "Voice": 1}),
-            "B": ("In a large orchestra or ensemble with 50+ musicians", {"String and Harp": 2, "Brass": 2, "Woodwinds": 2, "Percussion": 1}),
-            "C": ("In a studio, recording and producing music using technology", {"Audio Arts and Sciences": 2, "Composition": 1}),
-            "D": ("In a community or educational setting, sharing music with others", {"Music and Society": 2}),
+            "B": ("In a large orchestra or ensemble with 50+ musicians", {"String & Harp": 2, "Brass": 2, "Woodwinds": 2, "Percussion": 1}),
+            "C": ("In a studio, recording and producing music using technology", {"Audio Arts & Sciences": 2, "Composition": 1}),
+            "D": ("In a community or educational setting, sharing music with others", {"Music & Society/ Music, Collaboration & Production": 2}),
             "E": ("At my desk composing — writing scores and hearing them in my head", {"Composition": 2})
         }
     },
@@ -918,74 +918,74 @@ MUSIC_DRILL_DOWN_QUESTIONS = [
         "id": "MUS_Q4",
         "text": "Which best describes your musical identity?",
         "options": {
-            "A": ("I am a performer — my purpose is to interpret and communicate music to audiences", {"Piano": 2, "Voice": 2, "String and Harp": 2, "Brass": 1, "Woodwinds": 1, "Percussion": 1}),
+            "A": ("I am a performer — my purpose is to interpret and communicate music to audiences", {"Piano": 2, "Voice": 2, "String & Harp": 2, "Brass": 1, "Woodwinds": 1, "Percussion": 1}),
             "B": ("I am a creator — I want to write music that didn't exist before", {"Composition": 2}),
-            "C": ("I am a technologist — I am as interested in sound engineering as in music itself", {"Audio Arts and Sciences": 2}),
-            "D": ("I am an educator and advocate — I want music to reach and transform communities", {"Music and Society": 2})
+            "C": ("I am a technologist — I am as interested in sound engineering as in music itself", {"Audio Arts & Sciences": 2}),
+            "D": ("I am an educator and advocate — I want music to reach and transform communities", {"Music & Society/ Music, Collaboration & Production": 2})
         }
     },
     {
         "id": "MUS_Q5",
         "text": "Which career path excites you most?",
         "options": {
-            "A": ("Orchestral musician or soloist performing on concert stages worldwide", {"String and Harp": 2, "Brass": 2, "Woodwinds": 2, "Piano": 1, "Percussion": 1}),
+            "A": ("Orchestral musician or soloist performing on concert stages worldwide", {"String & Harp": 2, "Brass": 2, "Woodwinds": 2, "Piano": 1, "Percussion": 1}),
             "B": ("Opera singer or concert vocalist", {"Voice": 2}),
             "C": ("Film composer, game music composer or concert hall composer", {"Composition": 2}),
-            "D": ("Sound engineer, music producer or audio technology specialist", {"Audio Arts and Sciences": 2}),
-            "E": ("Music educator, arts administrator or cultural policy professional", {"Music and Society": 2})
+            "D": ("Sound engineer, music producer or audio technology specialist", {"Audio Arts & Sciences": 2}),
+            "E": ("Music educator, arts administrator or cultural policy professional", {"Music & Society/ Music, Collaboration & Production": 2})
         }
     },
     {
         "id": "MUS_Q6",
         "text": "How important is music technology in your musical vision?",
         "options": {
-            "A": ("Central — I am as excited by DAWs, microphones and acoustics as I am by instruments", {"Audio Arts and Sciences": 3}),
-            "B": ("Very important — I use technology as a core tool in composition and production", {"Composition": 2, "Audio Arts and Sciences": 1}),
-            "C": ("Somewhat important — I use technology to support my performance or teaching", {"Music and Society": 1, "Piano": 1}),
-            "D": ("Not particularly important — I am a traditional performance-focused musician", {"String and Harp": 1, "Brass": 1, "Woodwinds": 1, "Voice": 1, "Percussion": 1, "Piano": 1})
+            "A": ("Central — I am as excited by DAWs, microphones and acoustics as I am by instruments", {"Audio Arts & Sciences": 3}),
+            "B": ("Very important — I use technology as a core tool in composition and production", {"Composition": 2, "Audio Arts & Sciences": 1}),
+            "C": ("Somewhat important — I use technology to support my performance or teaching", {"Music & Society/ Music, Collaboration & Production": 1, "Piano": 1}),
+            "D": ("Not particularly important — I am a traditional performance-focused musician", {"String & Harp": 1, "Brass": 1, "Woodwinds": 1, "Voice": 1, "Percussion": 1, "Piano": 1})
         }
     },
     {
         "id": "MUS_Q7",
         "text": "Which music do you feel most connected to performing or creating?",
         "options": {
-            "A": ("Classical orchestral and chamber music", {"String and Harp": 2, "Woodwinds": 2, "Brass": 2, "Piano": 1}),
+            "A": ("Classical orchestral and chamber music", {"String & Harp": 2, "Woodwinds": 2, "Brass": 2, "Piano": 1}),
             "B": ("Opera and vocal music", {"Voice": 2}),
-            "C": ("Contemporary and experimental music", {"Composition": 2, "Percussion": 2, "Audio Arts and Sciences": 1}),
-            "D": ("Music that serves communities — educational, therapeutic or accessible", {"Music and Society": 2}),
-            "E": ("Cross-genre — I want to explore everything from classical to jazz to world music", {"Percussion": 2, "Audio Arts and Sciences": 1, "Composition": 1})
+            "C": ("Contemporary and experimental music", {"Composition": 2, "Percussion": 2, "Audio Arts & Sciences": 1}),
+            "D": ("Music that serves communities — educational, therapeutic or accessible", {"Music & Society/ Music, Collaboration & Production": 2}),
+            "E": ("Cross-genre — I want to explore everything from classical to jazz to world music", {"Percussion": 2, "Audio Arts & Sciences": 1, "Composition": 1})
         }
     },
     {
         "id": "MUS_Q8",
         "text": "Which best describes your broader relationship with music?",
         "options": {
-            "A": ("Music is my craft — I dedicate myself to mastering my instrument above all", {"Piano": 2, "Voice": 2, "String and Harp": 1, "Brass": 1, "Woodwinds": 1}),
+            "A": ("Music is my craft — I dedicate myself to mastering my instrument above all", {"Piano": 2, "Voice": 2, "String & Harp": 1, "Brass": 1, "Woodwinds": 1}),
             "B": ("Music is my creative outlet — I express myself most through composing", {"Composition": 2}),
-            "C": ("Music is a technology — I am fascinated by how sound works and can be shaped", {"Audio Arts and Sciences": 2}),
-            "D": ("Music is a social force — I care about its role in culture, education and community", {"Music and Society": 2})
+            "C": ("Music is a technology — I am fascinated by how sound works and can be shaped", {"Audio Arts & Sciences": 2}),
+            "D": ("Music is a social force — I care about its role in culture, education and community", {"Music & Society/ Music, Collaboration & Production": 2})
         }
     },
     {
         "id": "MUS_Q9",
         "text": "How do you imagine your daily life as a music professional?",
         "options": {
-            "A": ("Practising for hours, performing concerts and travelling internationally", {"Piano": 2, "Voice": 2, "String and Harp": 1, "Brass": 1, "Woodwinds": 1}),
+            "A": ("Practising for hours, performing concerts and travelling internationally", {"Piano": 2, "Voice": 2, "String & Harp": 1, "Brass": 1, "Woodwinds": 1}),
             "B": ("Writing music at a desk or keyboard and hearing it realised by performers", {"Composition": 2}),
-            "C": ("In a studio working with artists to capture and shape their sound", {"Audio Arts and Sciences": 2}),
-            "D": ("Teaching, running workshops or managing arts programmes for communities", {"Music and Society": 2}),
-            "E": ("Rehearsing with an ensemble and performing a wide variety of repertoire", {"Percussion": 2, "Brass": 1, "Woodwinds": 1, "String and Harp": 1})
+            "C": ("In a studio working with artists to capture and shape their sound", {"Audio Arts & Sciences": 2}),
+            "D": ("Teaching, running workshops or managing arts programmes for communities", {"Music & Society/ Music, Collaboration & Production": 2}),
+            "E": ("Rehearsing with an ensemble and performing a wide variety of repertoire", {"Percussion": 2, "Brass": 1, "Woodwinds": 1, "String & Harp": 1})
         }
     },
     {
         "id": "MUS_Q10",
         "text": "Which statement feels most like you?",
         "options": {
-            "A": ("I am a dedicated instrumentalist — my whole musical life revolves around my instrument", {"Piano": 2, "String and Harp": 2, "Brass": 2, "Woodwinds": 2, "Percussion": 2}),
+            "A": ("I am a dedicated instrumentalist — my whole musical life revolves around my instrument", {"Piano": 2, "String & Harp": 2, "Brass": 2, "Woodwinds": 2, "Percussion": 2}),
             "B": ("I am a singer — my voice is my instrument and my most honest form of expression", {"Voice": 2}),
             "C": ("I am a composer — I hear music in my head that the world hasn't heard yet", {"Composition": 2}),
-            "D": ("I am a sound architect — I shape sonic experiences through technology", {"Audio Arts and Sciences": 2}),
-            "E": ("I am a music advocate — I want music to be accessible and meaningful to everyone", {"Music and Society": 2})
+            "D": ("I am a sound architect — I shape sonic experiences through technology", {"Audio Arts & Sciences": 2}),
+            "E": ("I am a music advocate — I want music to be accessible and meaningful to everyone", {"Music & Society/ Music, Collaboration & Production": 2})
         }
     }
 ]
@@ -1082,11 +1082,23 @@ CLUSTER_CONFIG = {
 # ============================================================
 
 def get_cluster_for_programme(programme_name: str) -> str | None:
-    """Return the cluster key for a given programme name"""
-    pname_lower = programme_name.lower()
+    """Return the cluster key for a given programme name — normalised exact match,
+    with tolerance for known Excel typos (e.g. Chemistyry -> Chemistry)"""
+    TYPO_MAP = {
+        "chemistyry": "chemistry",
+        "landscapre architecuture": "landscape architecture",
+        "electrical englineering": "electrical engineering",
+    }
+
+    def normalise(s):
+        s = s.lower().replace('&', 'and').replace('  ', ' ').strip()
+        return TYPO_MAP.get(s, s)
+
+    pname_norm = normalise(programme_name)
+
     for cluster_key, config in CLUSTER_CONFIG.items():
         for prog in config["programmes"]:
-            if prog.lower() in pname_lower or pname_lower in prog.lower():
+            if normalise(prog) == pname_norm:
                 return cluster_key
     return None
 
