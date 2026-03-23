@@ -1182,7 +1182,7 @@ def check_cluster_trigger(matches_df: pd.DataFrame) -> list:
     """Return list of cluster keys where 3+ of top 5 results belong to that cluster.
 
     Uses Faculty column (via get_cluster_for_result) for accurate cluster detection."""
-    top_5 = matches_df.head(5)
+    top_5 = matches_df.head(8)
     triggered = []
     cluster_counts = {key: 0 for key in CLUSTER_CONFIG}
 
@@ -1542,7 +1542,7 @@ def show_results_page(questions_df, programmes_df, riasec_desc_df):
     if triggered_clusters:
         st.markdown("---")
         st.markdown("### 🔍 Want to go deeper?")
-        st.markdown("*3 or more of your top matches belong to the same faculty — answer 10 more focused questions to find your single best-fit programme within that faculty.*")
+        st.markdown("*3 or more of your top 8 matches belong to the same faculty — answer 10 more focused questions to find your single best-fit programme within that faculty.*")
 
         for cluster_key in triggered_clusters:
             config = CLUSTER_CONFIG[cluster_key]
