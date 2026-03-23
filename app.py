@@ -1091,39 +1091,103 @@ CLUSTER_CONFIG = {
 
 
 # ============================================================
+# FACULTY-TO-CLUSTER MAPPING (FIX for drill-down trigger bug)
+# ============================================================
+# This mapping uses the Faculty column from the Programmes Excel sheet
+# to determine which cluster a programme belongs to. This is more
+# reliable than matching programme names (which can have typos or
+# appear in multiple clusters like "Computer Engineering").
+#
+# Each key is a lowercase substring that will be checked against the
+# Faculty column value. The mapping is checked in order, so more
+# specific keys should come first.
+
+FACULTY_TO_CLUSTER = {
+    "design and engineering": "cde",
+    "cde": "cde",
+    "computing": "computing",
+    "school of computing": "computing",
+    "business": "business",
+    "yong siew toh": "music",
+    "conservatory of music": "music",
+    "music": "music",
+    # CHS contains both humanities and sciences — handled specially below
+}
+
+# Programmes under CHS that belong to the "sciences" cluster
+# (everything else in CHS maps to "humanities")
+CHS_SCIENCES_SET = {s.lower() for s in SCIENCES_PROGRAMMES}
+
+
+# ============================================================
 # HELPER FUNCTIONS
 # ============================================================
 
-def get_cluster_for_programme(programme_name: str) -> str | None:
-    """Return the cluster key for a given programme name — normalised exact match,
-    with tolerance for known Excel typos (e.g. Chemistyry -> Chemistry)"""
+def _normalise_name(s):
+    """Normalise a programme name for comparison: lowercase, strip, fix known typos."""
     TYPO_MAP = {
         "chemistyry": "chemistry",
         "landscapre architecuture": "landscape architecture",
         "electrical englineering": "electrical engineering",
     }
+    s = s.lower().replace('&', 'and').replace('  ', ' ').strip()
+    return TYPO_MAP.get(s, s)
 
-    def normalise(s):
-        s = s.lower().replace('&', 'and').replace('  ', ' ').strip()
-        return TYPO_MAP.get(s, s)
 
-    pname_norm = normalise(programme_name)
+def get_cluster_for_programme(programme_name: str) -> str | None:
+    """Return the cluster key for a given programme name — normalised exact match,
+    with tolerance for known Excel typos (e.g. Chemistyry -> Chemistry).
+
+    NOTE: This is the name-only fallback. Prefer get_cluster_for_result() which
+    also uses the Faculty column for accurate detection."""
+    pname_norm = _normalise_name(programme_name)
 
     for cluster_key, config in CLUSTER_CONFIG.items():
         for prog in config["programmes"]:
-            if normalise(prog) == pname_norm:
+            if _normalise_name(prog) == pname_norm:
                 return cluster_key
     return None
 
 
+def get_cluster_for_result(programme_name: str, faculty: str) -> str | None:
+    """Determine cluster using Faculty column first, programme name as fallback.
+
+    This fixes the bug where programmes like 'Computer Engineering' (which exist
+    in both CDE and Computing) were always mapped to CDE due to dict ordering.
+    By using the Faculty column from the Excel data, we get the correct cluster."""
+    faculty_lower = str(faculty).lower().strip()
+
+    # 1) Check explicit faculty-to-cluster mappings
+    for key, cluster in FACULTY_TO_CLUSTER.items():
+        if key in faculty_lower:
+            return cluster
+
+    # 2) Handle CHS (Humanities and Sciences) — split into humanities vs sciences
+    if "humanities" in faculty_lower or "sciences" in faculty_lower or "chs" in faculty_lower:
+        pname_norm = _normalise_name(programme_name)
+        if pname_norm in CHS_SCIENCES_SET:
+            return "sciences"
+        # Check if it's a known humanities programme
+        for prog in HUMANITIES_PROGRAMMES:
+            if _normalise_name(prog) == pname_norm:
+                return "humanities"
+        # Default CHS programmes to humanities
+        return "humanities"
+
+    # 3) Fallback to programme-name-only matching
+    return get_cluster_for_programme(programme_name)
+
+
 def check_cluster_trigger(matches_df: pd.DataFrame) -> list:
-    """Return list of cluster keys where 3+ of top 5 results belong to that cluster"""
+    """Return list of cluster keys where 3+ of top 5 results belong to that cluster.
+
+    Uses Faculty column (via get_cluster_for_result) for accurate cluster detection."""
     top_5 = matches_df.head(5)
     triggered = []
     cluster_counts = {key: 0 for key in CLUSTER_CONFIG}
 
     for _, row in top_5.iterrows():
-        cluster = get_cluster_for_programme(row['Programme_Name'])
+        cluster = get_cluster_for_result(row['Programme_Name'], row['Faculty'])
         if cluster:
             cluster_counts[cluster] += 1
 
