@@ -1372,7 +1372,7 @@ def show_welcome_page():
         - **Values** (what matters to you in a career)
 
         #### How it works:
-        1. **Answer 29 questions** (about 5–7 minutes)
+        1. **Answer 29 questions** (about 3 minutes)
         2. **Get your RIASEC profile** — your personal interest type
         3. **See your top 8 programme matches** with explanations
         4. **Explore deeper** — if your results cluster around a faculty, answer 10 more targeted questions for a single best-fit recommendation
